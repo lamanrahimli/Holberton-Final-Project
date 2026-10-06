@@ -1,0 +1,31 @@
+# Bülbül agent - TLS / mutual-TLS verification profile (pairs with config/server-tls-test.yml).
+#   KB_TLS_SECRET=wrong kharibulbul agent -c config/agent-tls-test.yml   -> must be rejected by the server
+agent:
+  name: "laptop-tls"
+  id_file: data/tls-test/agent.id
+  labels: { purpose: tls-verification }
+
+server:
+  host: 127.0.0.1
+  port: 5045
+  tls:
+    enabled: true
+    ca: certs/ca.crt                       # verify the server against the lab CA
+    verify: true
+    cert: certs/agent-laptop-test.crt      # client certificate (mTLS)
+    key: certs/agent-laptop-test.key
+  shared_secret: "${KB_TLS_SECRET:-kb-test-secret}"
+  reconnect_min: 1
+  reconnect_max: 3
+
+spool: { dir: data/tls-test/spool, max_mb: 10 }
+batch: { size: 20, flush_interval: 0.5 }
+heartbeat_interval: 5
+log_level: INFO
+
+inputs:
+  - type: file
+    paths: ["data/tls-test/input.log"]
+    dataset: linux.auth
+    start: beginning
+    interval: 0.5

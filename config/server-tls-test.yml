@@ -1,0 +1,33 @@
+# Kharibulbul server - TLS / mutual-TLS verification profile (Week 4 hardening test).
+# Runs next to a normal server: different ports and its own data directory.
+#   bash scripts/gen-certs.sh 127.0.0.1 laptop-test        (creates certs/)
+#   kharibulbul server -c config/server-tls-test.yml
+name: "Kharibulbul TLS test"
+data_dir: data/tls-test
+log_level: INFO
+
+ingest:
+  tcp:
+    enabled: true
+    host: 127.0.0.1
+    port: 5045
+    tls:
+      enabled: true
+      cert: certs/server.crt
+      key: certs/server.key
+      ca: certs/ca.crt            # set -> clients must present a certificate signed by the lab CA (mTLS)
+  syslog_udp: { enabled: false }
+  syslog_tcp: { enabled: false }
+  http: { enabled: true }
+  shared_secret: "kb-test-secret"
+
+api: { host: 127.0.0.1, port: 8081, token: "" }
+
+store:
+  sqlite: { path: data/tls-test/kharibulbul.db }
+  retention_days: 1
+
+alerts:
+  notify:
+    console: { enabled: true }
+    file: { enabled: true, path: data/tls-test/alerts.jsonl }

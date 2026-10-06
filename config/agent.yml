@@ -1,0 +1,44 @@
+# Bülbül agent configuration - Linux host (Ubuntu/Debian/RHEL)
+agent:
+  name: ""                      # default: hostname
+  id_file: data/agent.id        # stable agent id, created on first start
+  labels: { zone: servers, owner: team-kharibulbul }
+
+server:
+  host: 10.10.10.5              # Kharibulbul server
+  port: 5044
+  tls:
+    enabled: false
+    ca: certs/ca.crt
+    verify: true
+  shared_secret: "${KB_SHARED_SECRET:-}"
+  reconnect_min: 1
+  reconnect_max: 30
+
+spool: { dir: data/spool, max_mb: 200 }
+batch: { size: 100, flush_interval: 1.0 }
+heartbeat_interval: 30
+log_level: INFO
+
+inputs:
+  - type: file
+    paths: ["/var/log/auth.log", "/var/log/secure"]     # Debian/Ubuntu | RHEL
+    dataset: linux.auth
+    start: end
+  - type: file
+    paths: ["/var/log/syslog", "/var/log/messages"]
+    dataset: linux.syslog
+  - type: file
+    paths: ["/var/log/ufw.log", "/var/log/kern.log"]
+    dataset: linux.firewall
+  - type: file
+    paths: ["/var/log/nginx/access.log", "/var/log/apache2/access.log", "/var/log/httpd/access_log"]
+    dataset: nginx.access
+  - type: journald                  # systemd journal (sshd, sudo, systemd units) - needs journalctl
+    enabled: false                  # enable if the host has no /var/log/auth.log (journald-only distros)
+    units: []
+  - type: command                   # example custom collector: listening sockets snapshot every 10 minutes
+    enabled: false
+    command: ["ss", "-tulnpH"]
+    interval: 600
+    dataset: linux.sockets

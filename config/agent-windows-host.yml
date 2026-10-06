@@ -1,0 +1,38 @@
+# Bülbül agent - the Windows machine that also runs the server (demo / classroom laptop).
+# Works WITHOUT administrator rights: it reads the channels a standard user may read.
+# Add "Security" and "Microsoft-Windows-Sysmon/Operational" when you run it elevated on a lab VM
+# (see config/agent-windows.yml for the full production profile).
+#   python -m kharibulbul agent -c config\agent-windows-host.yml      (or: .\scripts\run-dev.ps1 -WindowsAgent)
+agent:
+  name: "win-laptop"
+  id_file: data/agent-windows-host/agent.id
+  labels: { zone: dev, os: windows, purpose: demo }
+
+server:
+  host: 127.0.0.1
+  port: 5044
+  tls: { enabled: false }
+  shared_secret: "${KB_SHARED_SECRET:-}"
+  reconnect_min: 1
+  reconnect_max: 10
+
+spool: { dir: data/agent-windows-host/spool, max_mb: 100 }
+batch: { size: 100, flush_interval: 1.0 }
+heartbeat_interval: 15
+log_level: INFO
+
+inputs:
+  - type: winlog
+    channels:
+      - System
+      - Application
+      - Microsoft-Windows-PowerShell/Operational
+      - Microsoft-Windows-Windows Defender/Operational
+      - Microsoft-Windows-TerminalServices-LocalSessionManager/Operational
+      - Microsoft-Windows-Windows Firewall With Advanced Security/Firewall
+      - Microsoft-Windows-Bits-Client/Operational
+    interval: 2
+    batch: 300
+    start: now                     # only new events; 'beginning' backfills the whole channel
+    exclude_event_ids:
+      System: [16, 1014, 7000, 7001]

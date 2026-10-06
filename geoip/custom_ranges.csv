@@ -1,0 +1,16 @@
+# Kharibulbul custom GeoIP ranges - checked first (before MaxMind and the DB-IP country table). Most specific prefix wins.
+# country_iso_code uses ISO 3166 user-assigned codes for non-countries: XL = lab private ranges, XX = documentation ranges.
+# cidr,name,country_iso_code,country_name,city_name,lat,lon,organization
+cidr,name,country_iso_code,country_name,city_name,lat,lon,organization
+10.10.10.0/24,Lab-SOC,XL,Lab (private range),Baku,40.4093,49.8671,Kharibulbul Lab
+10.10.20.0/24,Lab-Workstations,XL,Lab (private range),Baku,40.4093,49.8671,Kharibulbul Lab
+10.10.30.0/24,Lab-Servers,XL,Lab (private range),Baku,40.4093,49.8671,Kharibulbul Lab
+10.10.99.0/24,Lab-Attacker,XL,Lab (private range),Shusha,39.7600,46.7500,Kharibulbul Lab
+203.0.113.0/24,TEST-NET-3,XX,Documentation range (lab test),,,,IANA documentation
+198.51.100.0/24,TEST-NET-2,XX,Documentation range (lab test),,,,IANA documentation
+192.0.2.0/24,TEST-NET-1,XX,Documentation range (lab test),,,,IANA documentation
+# Hand-picked public ranges: add city / coordinates / organisation on top of the country table
+5.191.0.0/16,Azerbaijan,AZ,Azerbaijan,Baku,40.4093,49.8671,Delta Telecom
+85.132.0.0/16,Azerbaijan,AZ,Azerbaijan,Baku,40.4093,49.8671,Baktelecom
+8.8.8.0/24,United States,US,United States,Mountain View,37.386,-122.0838,Google Public DNS
+1.1.1.0/24,Australia,AU,Australia,Sydney,-33.8688,151.2093,Cloudflare DNS

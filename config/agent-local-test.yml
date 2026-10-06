@@ -1,0 +1,31 @@
+# Bülbül agent - local end-to-end test on the developer machine (no admin rights needed).
+# Reads real Windows channels that are readable without elevation + tails a test file.
+agent:
+  name: "laptop-test"
+  id_file: data/local-test/agent.id
+  labels: { zone: dev, purpose: week1-verification }
+
+server:
+  host: 127.0.0.1
+  port: 5044
+  tls: { enabled: false }
+  shared_secret: ""
+  reconnect_min: 1
+  reconnect_max: 5
+
+spool: { dir: data/local-test/spool, max_mb: 50 }
+batch: { size: 50, flush_interval: 0.5 }
+heartbeat_interval: 10
+log_level: INFO
+
+inputs:
+  - type: winlog
+    channels: [System, Application, Microsoft-Windows-PowerShell/Operational]
+    interval: 2
+    batch: 200
+    start: now
+  - type: file
+    paths: ["data/local-test/test-input.log"]
+    dataset: linux.auth
+    start: beginning
+    interval: 0.5

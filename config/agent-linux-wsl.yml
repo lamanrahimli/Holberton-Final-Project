@@ -1,0 +1,29 @@
+# Bülbül agent - Linux side of the demo: Ubuntu inside WSL 2 on the same laptop.
+# Start it with  scripts/wsl-agent.sh  (from Windows: .\scripts\run-dev.ps1 -WslAgent), which finds the
+# Windows host address (127.0.0.1 in mirrored networking, the NAT gateway otherwise) and exports it as
+# KB_SERVER_HOST before starting the agent.
+agent:
+  name: "ubuntu-wsl"
+  id_file: data/agent-linux-wsl/agent.id
+  labels: { zone: dev, os: linux, purpose: demo, platform: wsl2 }
+
+server:
+  host: "${KB_SERVER_HOST:-127.0.0.1}"
+  port: 5044
+  tls: { enabled: false }
+  shared_secret: "${KB_SHARED_SECRET:-}"
+  reconnect_min: 1
+  reconnect_max: 10
+
+spool: { dir: data/agent-linux-wsl/spool, max_mb: 100 }
+batch: { size: 100, flush_interval: 1.0 }
+heartbeat_interval: 15
+log_level: INFO
+
+inputs:
+  - type: journald                 # systemd journal: sudo, su, useradd, cron, kernel, systemd units, logger(1) lines
+    dataset: linux.journald        # (WSL needs systemd=true in /etc/wsl.conf - scripts/wsl-agent.sh sets it)
+    units: []                      # empty = whole journal
+  # Ubuntu's WSL image also runs rsyslog, so /var/log/auth.log and kern.log carry the *same* lines as the
+  # journal: tailing them too would ship every event twice. Use either the journal (above) or the files
+  # from config/agent.yml, never both on one host.

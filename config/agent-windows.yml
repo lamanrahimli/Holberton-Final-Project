@@ -1,0 +1,40 @@
+# Bülbül agent configuration - Windows host (workstation / server / DC)
+# Run as Administrator (reading the Security channel requires it):
+#   python -m kharibulbul agent -c config\agent-windows.yml
+agent:
+  name: ""
+  id_file: data/agent.id
+  labels: { zone: workstations, owner: team-kharibulbul }
+
+server:
+  host: 10.10.10.5
+  port: 5044
+  tls: { enabled: false, ca: certs/ca.crt, verify: true }
+  shared_secret: "${KB_SHARED_SECRET:-}"
+
+spool: { dir: data/spool, max_mb: 200 }
+batch: { size: 100, flush_interval: 1.0 }
+heartbeat_interval: 30
+log_level: INFO
+
+inputs:
+  - type: winlog
+    channels:
+      - Security
+      - System
+      - Microsoft-Windows-Sysmon/Operational
+      - Microsoft-Windows-PowerShell/Operational
+      - Microsoft-Windows-Windows Defender/Operational
+      - Microsoft-Windows-TaskScheduler/Operational
+      - Microsoft-Windows-TerminalServices-LocalSessionManager/Operational
+    interval: 2
+    batch: 500
+    start: now                     # 'beginning' to backfill the whole log on first run
+    exclude_event_ids:
+      Security: [4656, 4658, 4663, 4690, 5152, 5158, 4703]   # very noisy object-access / WFP allow events
+      System: [16, 1014, 7000, 7001]
+
+  - type: file                     # Windows Firewall log (enable with scripts/enable-audit-policy.ps1)
+    paths: ["C:\\Windows\\System32\\LogFiles\\Firewall\\pfirewall.log"]
+    dataset: windows.firewall_log
+    start: end

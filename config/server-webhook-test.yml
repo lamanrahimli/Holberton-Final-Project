@@ -1,0 +1,27 @@
+# Kharibulbul server - webhook notification verification profile (Week 3).
+# Pair with a local receiver, e.g. the tiny python http.server used in the project log, listening on 127.0.0.1:9099.
+name: "Kharibulbul webhook test"
+data_dir: data/webhook-test
+log_level: INFO
+
+ingest:
+  tcp: { enabled: true, host: 127.0.0.1, port: 5046, tls: { enabled: false } }
+  syslog_udp: { enabled: false }
+  syslog_tcp: { enabled: false }
+  http: { enabled: true }
+
+api: { host: 127.0.0.1, port: 8082, token: "" }
+
+store:
+  sqlite: { path: data/webhook-test/kharibulbul.db }
+  retention_days: 1
+
+alerts:
+  notify:
+    console: { enabled: true }
+    file: { enabled: true, path: data/webhook-test/alerts.jsonl }
+    webhook:
+      enabled: true
+      url: "http://127.0.0.1:9099/kharibulbul"
+      headers: { X-Kharibulbul-Test: "week3" }
+      min_severity: high          # medium/low alerts are not forwarded

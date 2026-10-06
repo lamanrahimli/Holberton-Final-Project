@@ -1,0 +1,5 @@
+# Kharibulbul local threat-intel: domain indicators. Sub-domains of a listed domain also match.
+# Lab-only test names (they do not resolve on the internet).
+badlab.xyz,KB lab test C2 domain
+evil-lab.top,KB lab test beacon domain
+kb-c2-test.badlab.xyz,KB lab test C2 host

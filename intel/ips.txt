@@ -1,0 +1,6 @@
+# Kharibulbul local threat-intel: IP indicators (one per line, optional ",description")
+# Lines starting with # are ignored. CIDR ranges are allowed. The file is re-read automatically.
+# These are RFC 5737 documentation addresses used only for lab tests (see `kharibulbul simulate intel-hit`).
+203.0.113.66,KB lab test C2 (documentation range)
+203.0.113.77,KB lab test C2 secondary
+198.51.100.0/24,KB lab test hostile range

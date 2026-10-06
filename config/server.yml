@@ -1,0 +1,96 @@
+# Kharibulbul SIEM - server configuration
+# Paths are relative to the repository root. ${ENV_VAR} and ${ENV_VAR:-default} are expanded.
+
+name: "Kharibulbul SIEM - Lab SOC"
+data_dir: data
+log_level: INFO
+
+ingest:
+  tcp:                         # Bülbül agents (newline-delimited JSON, optional TLS)
+    enabled: true
+    host: 0.0.0.0
+    port: 5044
+    tls:
+      enabled: false           # see scripts/gen-certs.sh to enable
+      cert: certs/server.crt
+      key: certs/server.key
+      ca: ""                   # set to certs/ca.crt to require client certificates (mutual TLS)
+  syslog_udp:                  # rsyslog / network devices / journald forwarders
+    enabled: true
+    host: 0.0.0.0
+    port: 5514                 # use 514 when running as root / with CAP_NET_BIND_SERVICE
+  syslog_tcp:
+    enabled: false
+    host: 0.0.0.0
+    port: 5514
+  http:
+    enabled: true              # POST /api/ingest (used by `kharibulbul simulate` and `replay`)
+  shared_secret: "${KB_SHARED_SECRET:-}"   # if set, agents must send it in their hello
+  max_line_bytes: 1048576
+
+api:
+  host: 0.0.0.0
+  port: 8080
+  token: "${KB_API_TOKEN:-}"   # empty = no authentication (isolated lab). Set it for the demo!
+  cors: false
+
+store:
+  backend: sqlite
+  sqlite:
+    path: data/kharibulbul.db
+    batch_size: 200
+    flush_interval: 1.0
+  retention_days: 0            # 0 = keep every event (no date limit); N = purge events older than N days, hourly
+  opensearch:                  # optional mirror for OpenSearch Dashboards (assignment reference tool)
+    enabled: false
+    url: https://127.0.0.1:9200
+    index_prefix: kharibulbul
+    username: admin
+    password: "${OPENSEARCH_PASSWORD:-}"
+    verify_tls: false
+
+pipeline:
+  lab_networks:                # used for network.direction and "outside the lab" rules
+    - 10.10.0.0/16
+    - 192.168.0.0/16
+    - 172.16.0.0/12
+  geoip:
+    custom_ranges: geoip/custom_ranges.csv        # our own CIDR table: lab zones, documentation ranges (checked first)
+    mmdb: geoip/GeoLite2-City.mmdb                # optional city-level database, free MaxMind account (see geoip/README.md)
+    country_db: geoip/dbip-country-lite.csv.gz    # IP -> country for every public address (DB-IP Lite, CC BY 4.0);
+                                                  # refresh with: kharibulbul geoip update
+  assets: config/assets.yml
+  intel_dir: intel
+  drop_datasets: []            # e.g. [windows.application] to ignore a dataset entirely
+  timezone_offset_hours: 4     # lab local time (Baku, UTC+4) for kharibulbul.time.* fields
+  business_hours: [8, 19]      # Mon-Fri 08:00-18:59 local -> kharibulbul.time.business_hours: true
+
+detect:
+  enabled: true
+  rules_dir: rules
+  default_suppress: 10m        # re-alert interval for the same rule + entity
+
+custom_dir: custom             # rules and playbooks created in the dashboard: custom/rules/*.yml, custom/playbooks/*.md
+
+alerts:
+  notify:
+    console: { enabled: true }
+    file: { enabled: true, path: data/alerts.jsonl }
+    webhook:
+      enabled: false
+      url: "https://hooks.example.test/kharibulbul"   # Slack/Teams/Discord compatible JSON POST
+      headers: {}
+      min_severity: medium
+    smtp:
+      enabled: false
+      host: smtp.lab.local
+      port: 587
+      username: ""
+      password: ""
+      from: kharibulbul@lab.local
+      to: [soc@lab.local]
+      starttls: true
+      min_severity: high
+
+agents:
+  heartbeat_timeout: 5m        # an agent silent for longer raises KB-KB-001

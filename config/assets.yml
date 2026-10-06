@@ -1,0 +1,44 @@
+# Asset inventory - enriches events with host.role, owner, criticality (raises alert severity)
+# and labels lab zones for private IP ranges (source.geo.name / destination.geo.name).
+zones:
+  - name: Lab-SOC          # Kharibulbul server, analyst workstation
+    cidrs: [10.10.10.0/24]
+  - name: Lab-Workstations
+    cidrs: [10.10.20.0/24]
+  - name: Lab-Servers
+    cidrs: [10.10.30.0/24]
+  - name: Lab-Attacker     # the machine that plays the adversary during tests
+    cidrs: [10.10.99.0/24]
+
+assets:
+  - hostnames: [kharibulbul, siem]
+    ips: [10.10.10.5]
+    role: siem
+    owner: team-kharibulbul
+    criticality: critical
+    os: Ubuntu 22.04
+  - hostnames: [dc01]
+    ips: [10.10.30.10]
+    role: domain-controller
+    owner: infra
+    criticality: critical
+    os: Windows Server 2022
+  - hostnames: [srv-web01]
+    ips: [10.10.30.20]
+    role: web-server
+    owner: web-team
+    criticality: high
+    os: Ubuntu 22.04
+    labels: { exposure: dmz }
+  - hostnames: [ws01, ws02]
+    ips: [10.10.20.10, 10.10.20.11]
+    role: workstation
+    owner: students
+    criticality: medium
+    os: Windows 11
+  - hostnames: [kali-lab]
+    ips: [10.10.99.10]
+    role: test-attacker
+    owner: red-team-student
+    criticality: low
+    os: Kali Linux

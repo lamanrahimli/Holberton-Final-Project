@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Kharibulbul SIEM logo - Xarıbülbül orchid">
+  <title>Kharibulbul (Xarıbülbül) SIEM</title>
+  <defs>
+    <linearGradient id="petal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fd3ff"/>
+      <stop offset="1" stop-color="#0092BC"/>
+    </linearGradient>
+    <linearGradient id="lip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff5a70"/>
+      <stop offset="1" stop-color="#b3001b"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3fd08f"/>
+      <stop offset="1" stop-color="#00AF66"/>
+    </linearGradient>
+  </defs>
+  <!-- background ring -->
+  <circle cx="100" cy="100" r="96" fill="#0b1220" stroke="#1f2b44" stroke-width="3"/>
+  <!-- stem -->
+  <path d="M100 150 C 98 165, 96 180, 92 192" stroke="url(#stem)" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <path d="M97 170 C 80 165, 70 168, 60 178 C 74 180, 88 178, 97 170 Z" fill="url(#stem)"/>
+  <!-- three sepals of the orchid -->
+  <ellipse cx="100" cy="52" rx="16" ry="34" fill="url(#petal)" stroke="#cfefff" stroke-width="1.5"/>
+  <ellipse cx="62" cy="86" rx="16" ry="34" fill="url(#petal)" stroke="#cfefff" stroke-width="1.5" transform="rotate(-62 62 86)"/>
+  <ellipse cx="138" cy="86" rx="16" ry="34" fill="url(#petal)" stroke="#cfefff" stroke-width="1.5" transform="rotate(62 138 86)"/>
+  <!-- two small inner petals -->
+  <ellipse cx="80" cy="76" rx="7" ry="16" fill="#e8f7ff" transform="rotate(-35 80 76)"/>
+  <ellipse cx="120" cy="76" rx="7" ry="16" fill="#e8f7ff" transform="rotate(35 120 76)"/>
+  <!-- the lip: a nightingale (bülbül) sitting in the flower -->
+  <path d="M100 82 C 118 82, 128 98, 126 116 C 124 134, 112 146, 100 148 C 88 146, 76 134, 74 116 C 72 98, 82 82, 100 82 Z" fill="url(#lip)" stroke="#ffd7dd" stroke-width="1.5"/>
+  <!-- wings -->
+  <path d="M84 104 C 74 108, 70 120, 76 132 C 84 124, 88 114, 84 104 Z" fill="#7a0016" opacity="0.85"/>
+  <path d="M116 104 C 126 108, 130 120, 124 132 C 116 124, 112 114, 116 104 Z" fill="#7a0016" opacity="0.85"/>
+  <!-- head and beak -->
+  <circle cx="100" cy="94" r="9" fill="#5c0012"/>
+  <circle cx="103" cy="92" r="1.8" fill="#ffffff"/>
+  <path d="M108 95 L 118 97 L 108 99 Z" fill="#ffb300"/>
+  <!-- speckles on the lip (the pattern of Ophrys caucasica) -->
+  <circle cx="94" cy="118" r="2" fill="#ffd166"/>
+  <circle cx="106" cy="122" r="2" fill="#ffd166"/>
+  <circle cx="100" cy="132" r="1.8" fill="#ffd166"/>
+</svg>
