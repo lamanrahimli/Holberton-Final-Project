@@ -1,0 +1,111 @@
+# Week 3 - rules written on top of the base set (network / DNS / fail2ban / DHCP)
+id: KB-NET-005
+title: Burst of blocked outbound connections from an internal host
+description: 30 or more outbound connections dropped by the host firewall (UFW/iptables or Windows Firewall) from one source in 5 minutes - a process trying many destinations/ports (scanner, worm, misconfigured beacon).
+severity: medium
+tags: [network, firewall, command-and-control, team-week3]
+mitre:
+  - { technique: T1046, tactic: discovery }
+  - { technique: T1071, tactic: command-and-control }
+logsource: { category: network }
+detection:
+  selection:
+    event.action: firewall-block
+    network.direction: outbound
+  condition: selection
+threshold:
+  count: 30
+  window: 5m
+  group_by: [host.name, source.ip]
+suppress: 15m
+playbook: playbooks/PB-009-c2-beacon.md
+---
+id: KB-NET-014
+title: DNS query burst to a single registered domain (beacon-like)
+description: 60+ Sysmon 22 queries from one host to sub-domains of the same registered domain within 10 minutes; CDNs of big vendors are filtered.
+severity: medium
+tags: [network, dns, command-and-control, team-week3]
+mitre:
+  - { technique: T1071.004, tactic: command-and-control }
+  - { technique: T1568, tactic: command-and-control }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "22"
+  filter_known:
+    dns.question.registered_domain: [microsoft.com, windows.com, windowsupdate.com, office.com, office.net, msedge.net, live.com, lab.local, google.com, gstatic.com, mozilla.org, mozilla.net, akamaized.net, akadns.net, cloudfront.net]
+  condition: selection and not filter_known
+threshold:
+  count: 60
+  window: 10m
+  group_by: [host.name, dns.question.registered_domain]
+suppress: 30m
+playbook: playbooks/PB-009-c2-beacon.md
+---
+id: KB-NET-030
+title: fail2ban banned an address
+description: fail2ban jailed a source after repeated failures (ssh, nginx-http-auth, ...). Confirms brute force seen by the host itself.
+severity: medium
+tags: [linux, fail2ban, brute-force, team-week3]
+mitre:
+  - { technique: T1110, tactic: credential-access }
+logsource: { dataset: linux.fail2ban }
+detection:
+  selection:
+    event.action: [fail2ban-ban, fail2ban-restore-ban]
+  condition: selection
+group_by: [host.name, source.ip, rule.name]
+suppress: 1h
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-NET-033
+title: fail2ban banned an address inside the lab network
+description: A ban whose source is one of our own lab ranges - an internal machine is brute-forcing another one (compromised host or an unauthorised test).
+severity: high
+tags: [linux, fail2ban, brute-force, lateral-movement, team-week3]
+mitre:
+  - { technique: T1110, tactic: credential-access }
+  - { technique: T1021, tactic: lateral-movement }
+logsource: { dataset: linux.fail2ban }
+detection:
+  selection:
+    event.action: [fail2ban-ban, fail2ban-restore-ban]
+    kharibulbul.network.zone_direction: internal
+  condition: selection
+group_by: [host.name, source.ip]
+suppress: 1h
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-NET-031
+title: DHCP address conflict or lease denied
+description: Windows DHCP server logged an IP conflict (13), a denied lease / NACK (15, 14, 22) or a policy drop (33, 36) - rogue device, static IP clash or spoofing on the segment.
+severity: medium
+tags: [network, dhcp, discovery, team-week3]
+mitre:
+  - { technique: T1557, tactic: credential-access }
+  - { technique: T1200, tactic: initial-access }
+logsource: { dataset: windows.dhcp }
+detection:
+  selection:
+    event.action: [dhcp-ip-conflict, dhcp-lease-denied, dhcp-lease-denied-scope-full, dhcp-bootp-denied, dhcp-packet-dropped-policy]
+  condition: selection
+group_by: [client.ip, client.mac]
+suppress: 1h
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-NET-032
+title: New DHCP lease outside business hours
+description: A new lease (DHCP 10) assigned while kharibulbul.time.business_hours is false - a device joined the lab network at night or during the weekend (inventory / physical-access check).
+severity: low
+tags: [network, dhcp, inventory, out-of-hours, team-week3]
+mitre:
+  - { technique: T1200, tactic: initial-access }
+logsource: { dataset: windows.dhcp }
+detection:
+  selection:
+    event.action: dhcp-lease-assigned
+    kharibulbul.time.business_hours: false
+  condition: selection
+group_by: [client.mac]
+suppress: 12h
+playbook: playbooks/PB-002-port-scan.md

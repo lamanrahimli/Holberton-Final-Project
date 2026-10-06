@@ -1,0 +1,183 @@
+# Living-off-the-land binaries (Sysmon 1 / Security 4688 process creation)
+id: KB-SYS-010
+title: certutil used to download or decode
+description: certutil.exe with -urlcache / -decode / -encode / -verifyctl - abused to fetch or decode payloads with a signed Microsoft binary.
+severity: high
+tags: [windows, sysmon, lolbin, execution]
+mitre:
+  - { technique: T1105, tactic: command-and-control }
+  - { technique: T1140, tactic: defense-evasion }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: certutil.exe
+    process.command_line|contains: [urlcache, -decode, -encode, verifyctl, "-split", "http"]
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-SYS-011
+title: mshta executing remote or inline script
+description: "mshta.exe with a URL, javascript:/vbscript: protocol or an .hta file - HTML application execution used by phishing chains."
+severity: high
+tags: [windows, sysmon, lolbin, execution]
+mitre:
+  - { technique: T1218.005, tactic: defense-evasion }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: mshta.exe
+    process.command_line|contains: ["http", "javascript:", "vbscript:", ".hta", "\\users\\", "\\temp\\", "\\appdata\\"]
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-SYS-012
+title: rundll32 with script protocol or unusual DLL location
+description: "rundll32.exe running javascript:/vbscript: payloads, url.dll/advpack tricks, or a DLL from a user-writable path."
+severity: high
+tags: [windows, sysmon, lolbin, execution]
+mitre:
+  - { technique: T1218.011, tactic: defense-evasion }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: rundll32.exe
+    process.command_line|contains:
+      - "javascript:"
+      - "vbscript:"
+      - "url.dll,"
+      - "advpack.dll,"
+      - "ieadvpack.dll,"
+      - "shell32.dll,#"
+      - "\\users\\"
+      - "\\temp\\"
+      - "\\appdata\\"
+      - "\\programdata\\"
+      - "\\public\\"
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-SYS-013
+title: regsvr32 loading a remote or script-based COM object (squiblydoo)
+description: regsvr32.exe with /i:http or scrobj.dll / .sct - executes scriptlets while looking like a normal DLL registration.
+severity: high
+tags: [windows, sysmon, lolbin, execution]
+mitre:
+  - { technique: T1218.010, tactic: defense-evasion }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: regsvr32.exe
+    process.command_line|contains: ["/i:http", "/i:ftp", "scrobj", ".sct", "/u /s", "\\users\\", "\\temp\\", "\\appdata\\"]
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-SYS-014
+title: bitsadmin used to download a file
+description: bitsadmin.exe /transfer /download /addfile - BITS abuse for downloads and persistence.
+severity: high
+tags: [windows, sysmon, lolbin, command-and-control]
+mitre:
+  - { technique: T1197, tactic: persistence }
+  - { technique: T1105, tactic: command-and-control }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: bitsadmin.exe
+    process.command_line|contains: ["/transfer", "/download", "/addfile", "/setnotifycmdline", "http"]
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-SYS-015
+title: WMIC process call create / remote node execution
+description: wmic.exe used to start processes (locally or on /node:) - lateral movement and defense evasion.
+severity: high
+tags: [windows, sysmon, lolbin, lateral-movement]
+mitre:
+  - { technique: T1047, tactic: execution }
+logsource: { module: windows }
+detection:
+  selection_create:
+    event.action: process-created
+    process.name: wmic.exe
+    process.command_line|contains|all: [process, call, create]
+  selection_node:
+    event.action: process-created
+    process.name: wmic.exe
+    process.command_line|contains: ["/node:", "shadowcopy delete", "/format:"]
+  condition: 1 of selection_*
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-SYS-016
+title: Script host executing from a user-writable directory
+description: wscript/cscript running a script from Users, Temp, AppData, Public or Downloads - common phishing payload stage.
+severity: medium
+tags: [windows, sysmon, lolbin, execution]
+mitre:
+  - { technique: T1059.005, tactic: execution }
+  - { technique: T1059.007, tactic: execution }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: [wscript.exe, cscript.exe]
+    process.command_line|contains: ["\\users\\", "\\temp\\", "\\appdata\\", "\\public\\", "\\downloads\\", "\\programdata\\"]
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-SYS-017
+title: Reconnaissance command burst (whoami, net, ipconfig, systeminfo...)
+description: 5 or more discovery commands from the same user on one host within 2 minutes - post-exploitation situational awareness.
+severity: medium
+tags: [windows, sysmon, discovery]
+mitre:
+  - { technique: T1087, tactic: discovery }
+  - { technique: T1082, tactic: discovery }
+  - { technique: T1016, tactic: discovery }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: [whoami.exe, net.exe, net1.exe, ipconfig.exe, systeminfo.exe, nltest.exe, tasklist.exe, quser.exe, hostname.exe, arp.exe, route.exe, netstat.exe, qwinsta.exe, dsquery.exe, nslookup.exe]
+  condition: selection
+threshold:
+  count: 5
+  window: 2m
+  group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-SYS-018
+title: Multiple reconnaissance commands chained in one command line
+description: A single command line that chains two or more discovery commands (whoami & net user & ipconfig ...), typical of scripted recon.
+severity: medium
+tags: [windows, sysmon, discovery]
+mitre:
+  - { technique: T1087, tactic: discovery }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.command_line|re: '(whoami|net\s+user|net\s+localgroup|net\s+group|ipconfig|systeminfo|tasklist|nltest|quser|qwinsta|arp\s+-a|netstat).*(&|\||;).*(whoami|net\s+user|net\s+localgroup|net\s+group|ipconfig|systeminfo|tasklist|nltest|quser|qwinsta|arp\s+-a|netstat)'
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md

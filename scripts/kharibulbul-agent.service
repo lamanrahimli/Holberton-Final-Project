@@ -1,0 +1,17 @@
+[Unit]
+Description=Kharibulbul Bülbül log agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/kharibulbul-agent
+Environment=PYTHONUNBUFFERED=1
+# EnvironmentFile=/etc/kharibulbul/agent.env   # KB_SHARED_SECRET=...
+ExecStart=/opt/kharibulbul-agent/.venv/bin/python -m kharibulbul agent -c /opt/kharibulbul-agent/config/agent.yml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

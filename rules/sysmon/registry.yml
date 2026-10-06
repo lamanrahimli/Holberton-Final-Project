@@ -1,0 +1,54 @@
+# Registry persistence rules (Sysmon 12/13/14)
+id: KB-SYS-070
+title: Autorun registry persistence (Run / RunOnce / Winlogon / IFEO)
+description: A value was set under the classic autostart keys - Run, RunOnce, Winlogon Shell/Userinit, Image File Execution Options, Services.
+severity: high
+tags: [windows, sysmon, persistence, registry]
+mitre:
+  - { technique: T1547.001, tactic: persistence }
+  - { technique: T1546.012, tactic: persistence }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "13"
+    registry.path|contains:
+      - "\\currentversion\\run\\"
+      - "\\currentversion\\runonce\\"
+      - "\\currentversion\\runonceex\\"
+      - "\\currentversion\\winlogon\\shell"
+      - "\\currentversion\\winlogon\\userinit"
+      - "\\image file execution options\\"
+      - "\\currentversion\\explorer\\shell folders\\startup"
+      - "\\currentversion\\policies\\explorer\\run"
+  filter_installers:
+    process.name: [msiexec.exe, tiworker.exe, trustedinstaller.exe, svchost.exe, setup.exe]
+  condition: selection and not filter_installers
+group_by: [host.name, registry.path]
+suppress: 1h
+playbook: playbooks/PB-008-persistence.md
+---
+id: KB-SYS-071
+title: Security tooling disabled through the registry (Defender / UAC / LSA)
+description: Sysmon 13 writes to DisableAntiSpyware, DisableRealtimeMonitoring, EnableLUA, RunAsPPL and similar protection switches.
+severity: high
+tags: [windows, sysmon, defense-evasion, registry]
+mitre:
+  - { technique: T1562.001, tactic: defense-evasion }
+  - { technique: T1548.002, tactic: privilege-escalation }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "13"
+    registry.path|contains:
+      - "\\windows defender\\disableantispyware"
+      - "\\real-time protection\\disablerealtimemonitoring"
+      - "\\policies\\system\\enablelua"
+      - "\\policies\\system\\consentpromptbehavioradmin"
+      - "\\control\\lsa\\runasppl"
+      - "\\control\\lsa\\disablerestrictedadmin"
+      - "\\terminal server\\fdenytsconnections"
+      - "\\control\\terminal server\\winstations\\rdp-tcp\\userauthentication"
+  condition: selection
+group_by: [host.name, registry.path]
+suppress: 1h
+playbook: playbooks/PB-005-log-cleared.md

@@ -1,0 +1,76 @@
+# DNS rules (Sysmon 22)
+id: KB-NET-010
+title: DNS query for a suspicious top-level domain
+description: Query for .xyz .top .zip .click .tk .ml .ga .cf .gq .onion .pw .cc .ws (tagged suspicious-tld by the normaliser) - cheap C2 / phishing domains.
+severity: medium
+tags: [network, dns, command-and-control]
+mitre:
+  - { technique: T1071.004, tactic: command-and-control }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "22"
+    tags: suspicious-tld
+  condition: selection
+group_by: [host.name, dns.question.registered_domain]
+suppress: 1h
+playbook: playbooks/PB-009-c2-beacon.md
+---
+id: KB-NET-011
+title: DNS query from a process running in a user-writable directory
+description: Sysmon 22 issued by a binary under Users/Temp/AppData/ProgramData/Public - resolving its C2.
+severity: medium
+tags: [network, dns, command-and-control, sysmon]
+mitre:
+  - { technique: T1071.004, tactic: command-and-control }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "22"
+    process.executable|contains: ["\\users\\public\\", "\\windows\\temp\\", "\\appdata\\local\\temp\\", "\\programdata\\", "\\downloads\\"]
+  filter_known:
+    process.name: [teams.exe, ms-teams.exe, msedge.exe, chrome.exe, firefox.exe, onedrive.exe, discord.exe, zoom.exe, code.exe, slack.exe, spotify.exe, msedgewebview2.exe]
+  condition: selection and not filter_known
+group_by: [host.name, process.name]
+suppress: 1h
+playbook: playbooks/PB-009-c2-beacon.md
+---
+id: KB-NET-012
+title: DNS query burst - possible DNS tunnelling or DGA
+description: One process issued 100+ DNS queries for distinct names within 5 minutes.
+severity: medium
+tags: [network, dns, command-and-control, exfiltration]
+mitre:
+  - { technique: T1071.004, tactic: command-and-control }
+  - { technique: T1568.002, tactic: command-and-control }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "22"
+  filter_browsers:
+    process.name: [msedge.exe, chrome.exe, firefox.exe, msedgewebview2.exe, svchost.exe]
+  condition: selection and not filter_browsers
+threshold:
+  count: 100
+  window: 5m
+  group_by: [host.name, process.name]
+  distinct: dns.question.name
+suppress: 30m
+playbook: playbooks/PB-009-c2-beacon.md
+---
+id: KB-NET-013
+title: DNS query for paste / tunnelling / anonymisation services
+description: Pastebin-like, ngrok, DNS-over-HTTPS resolvers, Tor and dynamic-DNS providers used to hide C2 or exfiltrate.
+severity: medium
+tags: [network, dns, command-and-control, exfiltration]
+mitre:
+  - { technique: T1102, tactic: command-and-control }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "22"
+    dns.question.name|contains: [pastebin, paste.ee, ngrok.io, ngrok-free, transfer.sh, duckdns.org, no-ip.com, hopto.org, torproject, dns.google, cloudflare-dns.com, "1dot1dot1dot1", anondns, requestbin, pipedream.net, webhook.site, burpcollaborator, interact.sh, oast.]
+  condition: selection
+group_by: [host.name, dns.question.registered_domain]
+suppress: 1h
+playbook: playbooks/PB-009-c2-beacon.md

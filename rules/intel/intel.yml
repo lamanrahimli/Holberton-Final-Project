@@ -1,0 +1,48 @@
+# Threat-intelligence match rules (indicators from intel/*.txt, enriched by the pipeline)
+id: KB-TI-001
+title: Connection to / from a listed malicious IP
+description: source.ip or destination.ip matched intel/ips.txt.
+severity: high
+tags: [threat-intel, command-and-control]
+mitre:
+  - { technique: T1071, tactic: command-and-control }
+detection:
+  selection:
+    threat.indicator.matched: true
+    threat.indicator.type: ipv4-addr
+  condition: selection
+group_by: [host.name, threat.indicator.value]
+suppress: 30m
+playbook: playbooks/PB-009-c2-beacon.md
+---
+id: KB-TI-002
+title: DNS query or connection to a listed malicious domain
+description: dns.question.name / destination.domain matched intel/domains.txt (sub-domains included).
+severity: high
+tags: [threat-intel, command-and-control, dns]
+mitre:
+  - { technique: T1071.004, tactic: command-and-control }
+detection:
+  selection:
+    threat.indicator.matched: true
+    threat.indicator.type: domain-name
+  condition: selection
+group_by: [host.name, threat.indicator.value]
+suppress: 30m
+playbook: playbooks/PB-009-c2-beacon.md
+---
+id: KB-TI-003
+title: Known-bad file hash executed or written
+description: process.hash.* / file.hash.sha256 matched intel/hashes.txt.
+severity: critical
+tags: [threat-intel, malware]
+mitre:
+  - { technique: T1204.002, tactic: execution }
+detection:
+  selection:
+    threat.indicator.matched: true
+    threat.indicator.type: file-hash
+  condition: selection
+group_by: [host.name, threat.indicator.value]
+suppress: 30m
+playbook: playbooks/PB-007-malware.md

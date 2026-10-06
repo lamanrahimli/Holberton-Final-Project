@@ -1,0 +1,32 @@
+# Rules about the SIEM itself (health of the sensor fleet)
+id: KB-KB-001
+title: Agent stopped reporting
+description: A Bülbül agent has been silent longer than agents.heartbeat_timeout - host down, agent killed, or network cut (possible sensor tampering).
+severity: medium
+tags: [kharibulbul, health, defense-evasion]
+mitre:
+  - { technique: T1562.001, tactic: defense-evasion }
+logsource: { dataset: kharibulbul.internal }
+detection:
+  selection:
+    event.action: agent-silent
+  condition: selection
+group_by: [agent.name]
+suppress: 6h
+playbook: playbooks/PB-005-log-cleared.md
+---
+id: KB-KB-002
+title: Parser errors on incoming events
+description: 50+ events tagged parser-error in 10 minutes from one dataset - a log format changed or an input is misconfigured (data quality alert for the SOC engineers).
+severity: low
+tags: [kharibulbul, health, data-quality]
+detection:
+  selection:
+    tags: parser-error
+  condition: selection
+threshold:
+  count: 50
+  window: 10m
+  group_by: [event.dataset]
+suppress: 1h
+playbook: playbooks/PB-005-log-cleared.md

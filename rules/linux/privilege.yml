@@ -1,0 +1,123 @@
+# Linux privilege-escalation / account rules
+id: KB-LNX-010
+title: Repeated sudo failures
+description: 3+ sudo password failures or "NOT in sudoers" for the same user on one host within 10 minutes.
+severity: medium
+tags: [linux, sudo, privilege-escalation]
+mitre:
+  - { technique: T1548.003, tactic: privilege-escalation }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: [sudo-failed, sudo-auth-failure]
+  condition: selection
+threshold:
+  count: 3
+  window: 10m
+  group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-010-linux-privesc.md
+---
+id: KB-LNX-011
+title: User added to a privileged group (sudo / wheel / root / docker / adm)
+description: usermod / gpasswd added a user to a group that grants root-equivalent access.
+severity: high
+tags: [linux, iam, privilege-escalation, persistence]
+mitre:
+  - { technique: T1098, tactic: persistence }
+  - { technique: T1078.003, tactic: privilege-escalation }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: group-member-added
+    group.name: [sudo, wheel, root, admin, docker, adm, lxd, disk, shadow]
+  condition: selection
+group_by: [host.name, user.target.name, group.name]
+suppress: 1h
+playbook: playbooks/PB-004-new-account.md
+---
+id: KB-LNX-012
+title: New Linux user account created
+description: useradd created an account (low; correlated with KB-COR-003 when it becomes privileged).
+severity: low
+tags: [linux, iam, persistence]
+mitre:
+  - { technique: T1136.001, tactic: persistence }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: user-created
+  condition: selection
+group_by: [host.name, user.target.name]
+suppress: 1h
+playbook: playbooks/PB-004-new-account.md
+---
+id: KB-LNX-013
+title: Download piped into a shell (curl | bash)
+description: sudo / cron / shell command that pipes curl or wget output into sh/bash/python - remote script execution.
+severity: high
+tags: [linux, execution, command-and-control]
+mitre:
+  - { technique: T1059.004, tactic: execution }
+  - { technique: T1105, tactic: command-and-control }
+logsource: { module: linux }
+detection:
+  selection:
+    process.command_line|re: '(curl|wget)\b[^|;&]*\|\s*(sudo\s+)?(ba|z|da)?sh\b|(curl|wget)\b[^|;&]*\|\s*python'
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-010-linux-privesc.md
+---
+id: KB-LNX-014
+title: Failed su to root
+description: su authentication failure towards root - manual privilege escalation attempt.
+severity: medium
+tags: [linux, privilege-escalation]
+mitre:
+  - { technique: T1548.003, tactic: privilege-escalation }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: [su-failed, su-pam-auth-failure]   # su's own record, or PAM's line when only that is collected
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-010-linux-privesc.md
+---
+id: KB-LNX-015
+title: sudo used to run an interactive shell or editor as root
+description: sudo COMMAND is a shell (bash/sh/zsh), su, or an editor/pager that can spawn a shell (vim, less, more, nano, find -exec).
+severity: low
+tags: [linux, sudo, privilege-escalation, hunting]
+mitre:
+  - { technique: T1548.003, tactic: privilege-escalation }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: sudo-command
+    event.outcome: success
+    process.command_line|re: '^(/usr)?/bin/(ba|z|da)?sh(\s|$)|^(/usr)?/bin/su(\s|$)|^(/usr)?/bin/(vim?|less|more|nano|awk|perl|python[0-9.]*)(\s|$)|^(/usr)?/bin/find\b.*-exec'
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 1h
+playbook: playbooks/PB-010-linux-privesc.md
+---
+id: KB-LNX-016
+title: Suspicious cron job (download, shell redirection, hidden path)
+description: cron executed a command that downloads, reverse-connects or runs from /tmp, /dev/shm or a dot-directory.
+severity: high
+tags: [linux, persistence, execution]
+mitre:
+  - { technique: T1053.003, tactic: persistence }
+logsource: { dataset: linux.cron }
+detection:
+  selection:
+    event.action: cron-command
+    process.command_line|contains: ["curl ", "wget ", "/tmp/", "/dev/shm/", "/dev/tcp/", "nc ", "ncat ", "bash -i", "base64 -d", "/var/tmp/", "/.", "python -c", "perl -e"]
+  filter_known:
+    process.command_line|contains: ["/usr/lib/sysstat", "logrotate", "apt", "certbot", "/etc/cron"]
+  condition: selection and not filter_known
+group_by: [host.name, user.name]
+suppress: 1h
+playbook: playbooks/PB-008-persistence.md

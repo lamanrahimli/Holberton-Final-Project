@@ -1,0 +1,92 @@
+# PowerShell abuse rules (Sysmon 1 command lines + PowerShell 4104 script blocks)
+id: KB-SYS-020
+title: PowerShell with encoded command
+description: powershell/pwsh started with -EncodedCommand (any abbreviation) and a long base64 blob, usually with hidden window / bypass.
+severity: high
+tags: [windows, powershell, execution, defense-evasion]
+mitre:
+  - { technique: T1059.001, tactic: execution }
+  - { technique: T1027, tactic: defense-evasion }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: [powershell.exe, pwsh.exe, powershell_ise.exe]
+    process.command_line|re: '(?i)\s[-/](e|ec|en|enc|enco|encod|encode|encoded|encodedcommand)\s+[A-Za-z0-9+/=]{20,}'
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-PS-001
+title: PowerShell download cradle / remote code execution
+description: >
+  Command line (Sysmon 1) or script block (PowerShell 4104) containing DownloadString / DownloadFile /
+  Invoke-WebRequest / Net.WebClient / Invoke-Expression - fetch-and-run pattern of most droppers.
+severity: high
+tags: [windows, powershell, command-and-control, execution]
+mitre:
+  - { technique: T1059.001, tactic: execution }
+  - { technique: T1105, tactic: command-and-control }
+logsource: { module: windows }
+detection:
+  selection_process:
+    event.action: process-created
+    process.name: [powershell.exe, pwsh.exe]
+    process.command_line|contains: [downloadstring, downloadfile, invoke-webrequest, "iwr ", net.webclient, start-bitstransfer, invoke-expression, "iex ", "iex(", frombase64string]
+  selection_scriptblock:
+    event.action: powershell-scriptblock
+    powershell.file.script_block_text|contains: [downloadstring, downloadfile, invoke-webrequest, net.webclient, start-bitstransfer, "invoke-expression", "iex (", frombase64string, "-nop -w hidden"]
+  condition: 1 of selection_*
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-PS-002
+title: PowerShell hidden window with execution policy bypass
+description: -WindowStyle Hidden together with -ExecutionPolicy Bypass / -NoProfile - the standard "quiet" launcher flags.
+severity: medium
+tags: [windows, powershell, defense-evasion]
+mitre:
+  - { technique: T1564.003, tactic: defense-evasion }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.name: [powershell.exe, pwsh.exe]
+    process.command_line|contains|all: ["hidden", "bypass"]
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-003-lolbin.md
+---
+id: KB-PS-003
+title: Suspicious PowerShell script block keywords (Mimikatz / AMSI bypass / reflection)
+description: Script block logging (4104) with well-known offensive tooling keywords.
+severity: critical
+tags: [windows, powershell, credential-access, defense-evasion]
+mitre:
+  - { technique: T1003.001, tactic: credential-access }
+  - { technique: T1562.001, tactic: defense-evasion }
+logsource: { dataset: windows.powershell }
+detection:
+  selection:
+    event.action: powershell-scriptblock
+    powershell.file.script_block_text|contains:
+      - mimikatz
+      - invoke-mimikatz
+      - sekurlsa
+      - amsiutils
+      - amsiinitfailed
+      - "[system.runtime.interopservices.marshal]::copy"
+      - invoke-reflectivepeinjection
+      - invoke-shellcode
+      - get-keystrokes
+      - invoke-kerberoast
+      - powerview
+      - bloodhound
+      - sharphound
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-007-malware.md

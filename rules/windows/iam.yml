@@ -1,0 +1,78 @@
+# Windows account / group management rules
+id: KB-WIN-010
+title: Local or domain user account created
+description: EventID 4720 - a new account was created. Low on its own; high when followed by privileged group membership (KB-COR-003).
+severity: low
+tags: [windows, iam, persistence]
+mitre:
+  - { technique: T1136.001, tactic: persistence }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4720"
+  condition: selection
+group_by: [host.name, user.target.name]
+suppress: 1h
+playbook: playbooks/PB-004-new-account.md
+---
+id: KB-WIN-011
+title: Member added to a privileged group (Administrators, Domain Admins, ...)
+description: EventID 4728/4732/4756 where the target group is a privileged builtin or domain group.
+severity: high
+tags: [windows, iam, privilege-escalation]
+mitre:
+  - { technique: T1098, tactic: persistence }
+  - { technique: T1078.002, tactic: privilege-escalation }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.action: group-member-added
+    group.name|contains:
+      - administrators
+      - domain admins
+      - enterprise admins
+      - schema admins
+      - account operators
+      - backup operators
+      - server operators
+      - remote desktop users
+      - dnsadmins
+      - remote management users
+  condition: selection
+group_by: [host.name, group.name, user.target.name]
+suppress: 1h
+playbook: playbooks/PB-004-new-account.md
+---
+id: KB-WIN-012
+title: User account deleted or disabled
+description: EventID 4726 (deleted) / 4725 (disabled) - track account lifecycle; useful for after-the-fact anti-forensics detection.
+severity: low
+tags: [windows, iam]
+mitre:
+  - { technique: T1531, tactic: impact }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: ["4726", "4725"]
+  condition: selection
+group_by: [host.name, user.target.name]
+suppress: 1h
+playbook: playbooks/PB-004-new-account.md
+---
+id: KB-WIN-013
+title: Password reset performed by another user
+description: EventID 4724 - an administrator (or attacker) reset someone else's password.
+severity: medium
+tags: [windows, iam]
+mitre:
+  - { technique: T1098, tactic: persistence }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4724"
+  filter_self:
+    user.name|endswith: "$"
+  condition: selection and not filter_self
+group_by: [host.name, user.target.name]
+suppress: 1h
+playbook: playbooks/PB-004-new-account.md

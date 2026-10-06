@@ -1,0 +1,110 @@
+# Windows persistence rules (services, scheduled tasks)
+id: KB-WIN-030
+title: Service installed with a suspicious binary path
+description: >
+  New service (System 7045 / Security 4697) whose image path lives in a user-writable or temporary
+  directory, or launches a script host / PowerShell / cmd - typical for persistence and psexec-style tools.
+severity: high
+tags: [windows, persistence, privilege-escalation]
+mitre:
+  - { technique: T1543.003, tactic: persistence }
+  - { technique: T1569.002, tactic: execution }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: service-installed
+    service.path|contains:
+      - "\\temp\\"
+      - "\\users\\"
+      - "\\programdata\\"
+      - "\\appdata\\"
+      - "\\public\\"
+      - "\\downloads\\"
+      - "\\recycler"
+      - "powershell"
+      - "pwsh"
+      - "cmd.exe /c"
+      - "cmd /c"
+      - "rundll32"
+      - "regsvr32"
+      - "mshta"
+      - "wscript"
+      - "cscript"
+      - "comspec"
+      - "\\\\127.0.0.1\\"
+      - "admin$"
+      - "-enc"
+      - "base64"
+  condition: selection
+group_by: [host.name, service.name]
+suppress: 1h
+playbook: playbooks/PB-008-persistence.md
+---
+id: KB-WIN-031
+title: Any new service installed
+description: Informational inventory of every service installation (7045/4697) - review weekly, tune into allow-list.
+severity: low
+tags: [windows, persistence, inventory]
+mitre:
+  - { technique: T1543.003, tactic: persistence }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: service-installed
+  condition: selection
+group_by: [host.name, service.name]
+suppress: 6h
+playbook: playbooks/PB-008-persistence.md
+---
+id: KB-WIN-032
+title: Scheduled task created or updated with suspicious action
+description: Security 4698/4702 where the task action runs PowerShell, cmd, a script host, LOLBins, hidden windows or binaries from user directories.
+severity: high
+tags: [windows, persistence, scheduled-task]
+mitre:
+  - { technique: T1053.005, tactic: persistence }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.action: [scheduled-task-created, scheduled-task-updated]
+    process.command_line|contains:
+      - powershell
+      - pwsh
+      - cmd.exe
+      - cmd /c
+      - wscript
+      - cscript
+      - mshta
+      - rundll32
+      - regsvr32
+      - certutil
+      - bitsadmin
+      - "\\users\\"
+      - "\\temp\\"
+      - "\\programdata\\"
+      - "\\appdata\\"
+      - "\\public\\"
+      - hidden
+      - -enc
+      - bypass
+      - "-w hidden"
+  condition: selection
+group_by: [host.name, winlog.task.name]
+suppress: 1h
+playbook: playbooks/PB-008-persistence.md
+---
+id: KB-WIN-033
+title: Scheduled task created (inventory)
+description: Every 4698 - low severity inventory rule for tuning and hunting.
+severity: low
+tags: [windows, persistence, inventory]
+mitre:
+  - { technique: T1053.005, tactic: persistence }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.action: scheduled-task-created
+  condition: selection
+group_by: [host.name, winlog.task.name]
+suppress: 6h
+playbook: playbooks/PB-008-persistence.md

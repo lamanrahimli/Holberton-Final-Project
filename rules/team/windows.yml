@@ -1,0 +1,120 @@
+# Week 3 - rules written on top of the base set (Windows / Sysmon / correlation)
+id: KB-WIN-007
+title: Interactive or remote logon to a critical asset outside business hours
+description: >
+  Successful logon (4624) of type interactive / remote-interactive / network-cleartext on a host whose
+  asset criticality is high or critical, while kharibulbul.time.business_hours is false (local time from
+  pipeline.timezone_offset_hours, Monday-Friday business_hours window). Admin work on the DC at 02:30 needs a reason.
+severity: medium
+tags: [windows, authentication, out-of-hours, team-week3]
+mitre:
+  - { technique: T1078, tactic: initial-access }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4624"
+    winlog.logon.type: [interactive, remote-interactive, network-cleartext]
+    kharibulbul.asset.criticality: [high, critical]
+    kharibulbul.time.business_hours: false
+  filter_machine:
+    user.name|endswith: "$"
+  filter_builtin:
+    user.name: [system, "local service", "network service", dwm-1, dwm-2, umfd-0, umfd-1, anonymous logon]
+  condition: selection and not filter_machine and not filter_builtin
+group_by: [host.name, user.name]
+suppress: 6h
+playbook: playbooks/PB-001-brute-force.md
+falsepositives:
+  - Scheduled maintenance windows - add the maintenance account to filter_builtin or disable the rule for the window
+---
+id: KB-WIN-008
+title: One account logging on to many hosts in a short time
+description: Successful logons (4624) of the same account on 4 or more distinct hosts within 10 minutes - a credential being used to hop through the network.
+severity: medium
+tags: [windows, authentication, lateral-movement, team-week3]
+mitre:
+  - { technique: T1021, tactic: lateral-movement }
+  - { technique: T1078, tactic: defense-evasion }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4624"
+    winlog.logon.type: [network, remote-interactive, interactive, network-cleartext]
+  filter_machine:
+    user.name|endswith: "$"
+  filter_builtin:
+    user.name: [system, "local service", "network service", anonymous logon]
+  condition: selection and not filter_machine and not filter_builtin
+threshold:
+  count: 4
+  window: 10m
+  group_by: [user.name]
+  distinct: host.name
+suppress: 30m
+playbook: playbooks/PB-001-brute-force.md
+falsepositives:
+  - Monitoring / backup service accounts that legitimately reach every host - add them to filter_builtin
+---
+id: KB-COR-006
+title: Remote desktop logon followed by a service installation on the same host
+description: An RDP session (LocalSessionManager 21 or 4624 type remote-interactive) and, within 30 minutes, a new service (7045 / 4697) on the same host - typical hands-on-keyboard persistence right after remote access.
+severity: critical
+tags: [windows, correlation, persistence, team-week3]
+mitre:
+  - { technique: T1021.001, tactic: lateral-movement }
+  - { technique: T1543.003, tactic: persistence }
+sequence:
+  by: [host.name]
+  within: 30m
+  stages:
+    - name: rdp
+      selection:
+        - { event.action: rdp-logon-success }
+        - { event.code: "4624", winlog.logon.type: remote-interactive }
+    - name: service
+      selection: { event.action: service-installed }
+suppress: 1h
+playbook: playbooks/PB-008-persistence.md
+---
+id: KB-COR-007
+title: Executable written to a download or temp folder and then executed
+description: Sysmon 11 file creation of an executable/script in Downloads, Temp, Public or AppData\Local\Temp followed within 30 minutes by a process start from the same kind of location on the same host.
+severity: high
+tags: [windows, sysmon, correlation, execution, team-week3]
+mitre:
+  - { technique: T1204.002, tactic: execution }
+  - { technique: T1105, tactic: command-and-control }
+sequence:
+  by: [host.name]
+  within: 30m
+  stages:
+    - name: dropped
+      selection:
+        event.action: file-created
+        file.extension: [exe, dll, scr, ps1, bat, cmd, vbs, js, jse, hta, msi, com]
+        file.path|contains: ["\\downloads\\", "\\temp\\", "\\public\\", "\\appdata\\local\\temp\\"]
+    - name: executed
+      selection:
+        event.action: process-created
+        process.executable|contains: ["\\downloads\\", "\\temp\\", "\\public\\", "\\appdata\\local\\temp\\"]
+suppress: 30m
+playbook: playbooks/PB-007-malware.md
+---
+id: KB-SYS-072
+title: Windows Defender exclusion added
+description: Sysmon 13 registry value set under Windows Defender\Exclusions (Paths, Processes, Extensions) - attackers exclude their working directory before dropping tools.
+severity: high
+tags: [windows, sysmon, defense-evasion, registry, team-week3]
+mitre:
+  - { technique: T1562.001, tactic: defense-evasion }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "13"
+    registry.path|contains: ["\\windows defender\\exclusions\\"]
+  condition: selection
+group_by: [host.name, registry.path]
+suppress: 1h
+playbook: playbooks/PB-005-log-cleared.md
+falsepositives:
+  - Software installers that register their own exclusions - review process.name and allow-list by exact registry.path

@@ -1,0 +1,79 @@
+# Week 3 - rules written on top of the base set (Linux / auditd)
+id: KB-LNX-017
+title: sudo used by an account outside the administrator allow-list
+description: A successful sudo command by a user who is not in the lab's admin allow-list (root, ops, ansible, sysadmin) - adjust filter_admins to your lab.
+severity: medium
+tags: [linux, sudo, privilege-escalation, policy, team-week3]
+mitre:
+  - { technique: T1548.003, tactic: privilege-escalation }
+logsource: { module: linux }
+detection:
+  selection:
+    event.action: sudo-command
+    event.outcome: success
+  filter_admins:
+    user.name: [root, ops, ansible, sysadmin]
+  condition: selection and not filter_admins
+group_by: [host.name, user.name]
+suppress: 1h
+playbook: playbooks/PB-010-linux-privesc.md
+falsepositives:
+  - New administrators - add them to filter_admins (keep the list in sync with /etc/sudoers)
+---
+id: KB-LNX-020
+title: Sensitive credential file read or modified (auditd / sudo / cron)
+description: A command line touching /etc/shadow, /etc/gshadow, /etc/sudoers, SSH private keys or authorized_keys, seen through auditd EXECVE / USER_CMD, sudo logs or cron.
+severity: high
+tags: [linux, auditd, credential-access, team-week3]
+mitre:
+  - { technique: T1003.008, tactic: credential-access }
+  - { technique: T1552.004, tactic: credential-access }
+logsource: { module: linux }
+detection:
+  selection:
+    event.action: [process-executed, sudo-command, cron-command]
+    process.command_line|contains: [/etc/shadow, /etc/gshadow, /etc/sudoers, authorized_keys, /root/.ssh, id_rsa, id_ed25519, id_ecdsa, .bash_history, /etc/master.passwd]
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-010-linux-privesc.md
+falsepositives:
+  - Backup jobs that archive /etc - filter their user.name or the exact command line
+---
+id: KB-LNX-021
+title: auditd - burst of PAM authentication failures from one source
+description: 6 or more auditd USER_AUTH records with res=failed from the same source address in 5 minutes (works even when the syslog auth log is unavailable).
+severity: high
+tags: [linux, auditd, authentication, brute-force, team-week3]
+mitre:
+  - { technique: T1110, tactic: credential-access }
+logsource: { dataset: linux.auditd }
+detection:
+  selection:
+    event.action: auth-failed
+  condition: selection
+threshold:
+  count: 6
+  window: 5m
+  group_by: [host.name, source.ip]
+suppress: 15m
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-LNX-022
+title: Audit subsystem disabled or reconfigured
+description: auditd CONFIG_CHANGE (audit_enabled=0, rules deleted) or the auditd service stopped - blinding the host sensor.
+severity: high
+tags: [linux, auditd, defense-evasion, team-week3]
+mitre:
+  - { technique: T1562.001, tactic: defense-evasion }
+logsource: { dataset: linux.auditd }
+detection:
+  selection_config:
+    event.action: auditd-config-change
+  selection_service:
+    event.action: service-stopped
+    service.name: auditd
+  condition: 1 of selection_*
+group_by: [host.name]
+suppress: 1h
+playbook: playbooks/PB-005-log-cleared.md

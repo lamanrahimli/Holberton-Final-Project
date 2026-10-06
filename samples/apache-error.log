@@ -1,0 +1,7 @@
+[Sat Sep 27 10:16:00.123456 2026] [core:error] [pid 1234:tid 5678] [client 10.10.99.10:40001] AH00128: File does not exist: /var/www/html/.env
+[Sat Sep 27 10:16:01.223456 2026] [core:error] [pid 1234:tid 5678] [client 10.10.99.10:40002] AH00128: File does not exist: /var/www/html/phpmyadmin
+[Sat Sep 27 10:16:02.323456 2026] [authz_core:error] [pid 1234:tid 5679] [client 10.10.99.10:40003] AH01630: client denied by server configuration: /var/www/html/.git/config
+[Sat Sep 27 10:16:03.423456 2026] [php:error] [pid 1235:tid 5680] [client 10.10.99.10:40004] PHP Warning:  include(shell.php): failed to open stream: No such file or directory in /var/www/html/index.php on line 12
+[Sat Sep 27 10:18:00.000000 2026] [mpm_event:notice] [pid 1230:tid 1230] AH00489: Apache/2.4.58 (Ubuntu) configured -- resuming normal operations
+[Sat Sep 27 10:18:00.000100 2026] [core:notice] [pid 1230:tid 1230] AH00094: Command line: '/usr/sbin/apache2'
+[Sat Sep 27 10:19:10.500000 2026] [proxy:error] [pid 1236:tid 5690] (111)Connection refused: AH00957: HTTP: attempt to connect to 127.0.0.1:9000 (localhost) failed

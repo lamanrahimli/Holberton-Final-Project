@@ -1,0 +1,11 @@
+# Kharibulbul SIEM - runtime dependencies (kept deliberately small: everything else is built from scratch)
+pyyaml>=6.0
+fastapi>=0.110
+uvicorn>=0.29
+
+# optional: MaxMind GeoLite2 reader (free account required for the .mmdb file)
+maxminddb>=2.5
+
+# development / tests
+pytest>=8.0
+httpx>=0.27

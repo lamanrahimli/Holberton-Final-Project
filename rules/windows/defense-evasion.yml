@@ -1,0 +1,80 @@
+# Windows defense-evasion rules
+id: KB-WIN-020
+title: Windows event log cleared
+description: Security log cleared (Security 1102) or another channel cleared (System 104). Almost always worth an investigation.
+severity: high
+tags: [windows, defense-evasion, anti-forensics]
+mitre:
+  - { technique: T1070.001, tactic: defense-evasion }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: [audit-log-cleared, event-log-cleared]
+  condition: selection
+group_by: [host.name]
+suppress: 30m
+playbook: playbooks/PB-005-log-cleared.md
+---
+id: KB-WIN-021
+title: Audit policy changed
+description: EventID 4719 - somebody changed what Windows audits; attackers do this to blind the SIEM.
+severity: medium
+tags: [windows, defense-evasion]
+mitre:
+  - { technique: T1562.002, tactic: defense-evasion }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4719"
+  condition: selection
+group_by: [host.name]
+suppress: 30m
+playbook: playbooks/PB-005-log-cleared.md
+---
+id: KB-WIN-022
+title: Windows Defender protection disabled or tampered
+description: Defender operational events 5001/5004/5010/5012 (real-time protection / AV disabled).
+severity: high
+tags: [windows, defense-evasion, defender]
+mitre:
+  - { technique: T1562.001, tactic: defense-evasion }
+logsource: { dataset: windows.defender }
+detection:
+  selection:
+    event.action: defender-protection-changed
+  condition: selection
+group_by: [host.name]
+suppress: 1h
+playbook: playbooks/PB-005-log-cleared.md
+---
+id: KB-WIN-023
+title: Windows Defender detected malware
+description: Defender 1116/1117/1006/1015 - a threat was detected or remediated on the host.
+severity: high
+tags: [windows, malware, defender]
+mitre:
+  - { technique: T1204, tactic: execution }
+logsource: { dataset: windows.defender }
+detection:
+  selection:
+    event.action: [defender-threat-detected, defender-threat-action]
+  condition: selection
+group_by: [host.name, threat.name]
+suppress: 30m
+playbook: playbooks/PB-007-malware.md
+---
+id: KB-WIN-024
+title: Sysmon service state or configuration changed
+description: Sysmon 4 (state changed) / 16 (config changed) - an attacker may stop or reconfigure the sensor.
+severity: high
+tags: [windows, defense-evasion, sysmon]
+mitre:
+  - { technique: T1562.001, tactic: defense-evasion }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: ["4", "16"]
+  condition: selection
+group_by: [host.name]
+suppress: 30m
+playbook: playbooks/PB-005-log-cleared.md

@@ -1,0 +1,132 @@
+# Network scan / connection-pattern rules
+id: KB-NET-001
+title: Port scan against a Windows host (Sysmon network connections)
+description: >
+  One source touched 20 or more distinct destination ports on the same host within 1 minute,
+  seen as inbound Sysmon 3 network connections. Note: Sysmon only logs connections that reach a
+  listening process; pair with KB-NET-003 (Windows Firewall drops) for closed ports.
+severity: high
+tags: [network, sysmon, reconnaissance, port-scan]
+mitre:
+  - { technique: T1046, tactic: discovery }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "3"
+    network.direction: inbound
+  filter_local:
+    source.ip: ["127.0.0.1", "::1"]
+  condition: selection and not filter_local
+threshold:
+  count: 20
+  window: 1m
+  group_by: [host.name, source.ip]
+  distinct: destination.port
+suppress: 15m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-NET-002
+title: Port scan blocked by the Linux firewall (UFW / iptables)
+description: One source hit 15 or more distinct destination ports that the firewall dropped within 2 minutes.
+severity: high
+tags: [network, linux, firewall, reconnaissance, port-scan]
+mitre:
+  - { technique: T1046, tactic: discovery }
+logsource: { dataset: linux.firewall }
+detection:
+  selection:
+    event.action: firewall-block
+  condition: selection
+threshold:
+  count: 15
+  window: 2m
+  group_by: [host.name, source.ip]
+  distinct: destination.port
+suppress: 15m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-NET-003
+title: Port scan blocked by the Windows Firewall
+description: pfirewall.log DROP entries for 15+ distinct ports from one source in 2 minutes (enable logging with scripts/enable-audit-policy.ps1).
+severity: high
+tags: [network, windows, firewall, reconnaissance, port-scan]
+mitre:
+  - { technique: T1046, tactic: discovery }
+logsource: { dataset: windows.firewall_log }
+detection:
+  selection:
+    event.action: firewall-block
+    network.direction: inbound
+  condition: selection
+threshold:
+  count: 15
+  window: 2m
+  group_by: [host.name, source.ip]
+  distinct: destination.port
+suppress: 15m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-NET-004
+title: Host sweep - one source connecting to many hosts on the same port
+description: A single source reached 10+ distinct destination hosts on one port within 2 minutes (SMB/RDP/SSH sweep for lateral movement).
+severity: medium
+tags: [network, reconnaissance, lateral-movement]
+mitre:
+  - { technique: T1018, tactic: discovery }
+  - { technique: T1021, tactic: lateral-movement }
+logsource: { category: network }
+detection:
+  selection:
+    event.category: network
+    destination.port: [22, 135, 139, 445, 3389, 5985, 5986]
+  filter_local:
+    source.ip: ["127.0.0.1", "::1"]
+  condition: selection and not filter_local
+threshold:
+  count: 10
+  window: 2m
+  group_by: [source.ip, destination.port]
+  distinct: destination.ip
+suppress: 15m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-NET-020
+title: Outbound connection to an uncommon port from a user-writable location
+description: Sysmon 3 outbound connection to a port other than 80/443/53/... started by a binary in Users/Temp/AppData/ProgramData - beaconing / reverse shell pattern.
+severity: high
+tags: [network, sysmon, command-and-control]
+mitre:
+  - { technique: T1571, tactic: command-and-control }
+  - { technique: T1071, tactic: command-and-control }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "3"
+    network.direction: outbound
+    process.executable|contains: ["\\users\\", "\\temp\\", "\\appdata\\", "\\programdata\\", "\\public\\", "\\downloads\\"]
+  filter_common_ports:
+    destination.port: [80, 443, 53, 8080, 8443, 123, 5353, 1900, 3702, 5355, 137, 138]
+  filter_known:
+    process.name: [teams.exe, ms-teams.exe, msedge.exe, chrome.exe, firefox.exe, onedrive.exe, discord.exe, zoom.exe, code.exe, slack.exe, spotify.exe]
+  condition: selection and not filter_common_ports and not filter_known
+group_by: [host.name, process.name, destination.ip]
+suppress: 30m
+playbook: playbooks/PB-009-c2-beacon.md
+---
+id: KB-NET-021
+title: Outbound connection to a common reverse-shell / C2 port
+description: Any outbound connection to ports 4444, 1337, 31337, 6666, 6667, 9001, 1080, 8888, 2222 (classic tool defaults) from a lab host.
+severity: high
+tags: [network, command-and-control]
+mitre:
+  - { technique: T1571, tactic: command-and-control }
+logsource: { category: network }
+detection:
+  selection:
+    event.category: network
+    network.direction: [outbound, external]
+    destination.port: [4444, 1337, 31337, 6666, 6667, 9001, 1080, 8888, 2222, 4443, 5555]
+  condition: selection
+group_by: [host.name, destination.ip, destination.port]
+suppress: 30m
+playbook: playbooks/PB-009-c2-beacon.md

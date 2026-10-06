@@ -1,0 +1,97 @@
+# Web server (nginx / Apache access log) rules
+id: KB-WEB-001
+title: Web scanning - many 404/403 responses for one client
+description: 15+ not-found / forbidden responses for a single client IP on one host within 2 minutes (directory brute force, vulnerability scanner).
+severity: medium
+tags: [web, reconnaissance, scanner]
+mitre:
+  - { technique: T1595.002, tactic: reconnaissance }
+  - { technique: T1595.003, tactic: reconnaissance }
+logsource: { module: web }
+detection:
+  selection:
+    event.category: web
+    http.response.status_code: [404, 403, 400]
+  condition: selection
+threshold:
+  count: 15
+  window: 2m
+  group_by: [host.name, source.ip]
+suppress: 15m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-WEB-002
+title: Web login brute force
+description: 5+ failed (401/403) POST requests to a login endpoint from one client within 5 minutes.
+severity: high
+tags: [web, authentication, brute-force]
+mitre:
+  - { technique: T1110, tactic: credential-access }
+logsource: { module: web }
+detection:
+  selection:
+    event.category: web
+    http.request.method: POST
+    url.path|contains: [wp-login, /login, /signin, /auth, xmlrpc.php, /admin, /user/login, /api/login, /session]
+    http.response.status_code: [401, 403, 429]
+  condition: selection
+threshold:
+  count: 5
+  window: 5m
+  group_by: [host.name, source.ip]
+suppress: 15m
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-WEB-003
+title: Known security-scanner user agent
+description: Requests from Nikto, sqlmap, nmap, masscan, gobuster, wpscan, nuclei... (tag scanner-user-agent).
+severity: medium
+tags: [web, reconnaissance, scanner]
+mitre:
+  - { technique: T1595.002, tactic: reconnaissance }
+logsource: { module: web }
+detection:
+  selection:
+    event.category: web
+    tags: scanner-user-agent
+  filter_generic:
+    user_agent.original|startswith: ["python-requests", "curl/", "wget/"]
+  condition: selection and not filter_generic
+group_by: [host.name, source.ip]
+suppress: 30m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-WEB-004
+title: Request for sensitive files or paths
+description: Attempts to read .env, .git, wp-config, backups, credentials, /etc/passwd, phpMyAdmin, web shells.
+severity: high
+tags: [web, initial-access, discovery]
+mitre:
+  - { technique: T1190, tactic: initial-access }
+  - { technique: T1083, tactic: discovery }
+logsource: { module: web }
+detection:
+  selection:
+    event.category: web
+    url.original|contains: ["/.env", "/.git", "wp-config", ".bak", "/backup", "/etc/passwd", "/.aws", "/phpmyadmin", "shell.php", "cmd.php", "/.ssh", "id_rsa", "../", "%2e%2e", "/actuator", "/.htpasswd", "/config.php", "web.config"]
+  condition: selection
+group_by: [host.name, source.ip]
+suppress: 30m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-WEB-005
+title: Web attack payload in URL (SQLi / XSS / command injection patterns)
+description: Query strings containing classic injection markers (union select, ' or 1=1, <script, ;cat , ${jndi:).
+severity: high
+tags: [web, initial-access, exploitation]
+mitre:
+  - { technique: T1190, tactic: initial-access }
+logsource: { module: web }
+detection:
+  selection:
+    event.category: web
+    url.original|contains: ["union select", "union+select", "' or 1=1", "'or'1'='1", "%27%20or%20", "<script", "%3cscript", "${jndi:", "%24%7bjndi", ";cat ", "|cat ", "/bin/sh", "sleep(", "benchmark(", "xp_cmdshell", "--+", "or 1=1", "' --"]
+  condition: selection
+group_by: [host.name, source.ip]
+suppress: 15m
+playbook: playbooks/PB-002-port-scan.md

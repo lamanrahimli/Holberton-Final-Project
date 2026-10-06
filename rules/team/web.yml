@@ -1,0 +1,61 @@
+# Week 3 - rules written on top of the base set (web servers)
+id: KB-WEB-006
+title: Web server 5xx error spike (availability)
+description: 20 or more HTTP 5xx responses on one host within 2 minutes - backend down, deployment gone wrong, or an attack causing errors.
+severity: medium
+tags: [web, availability, team-week3]
+mitre:
+  - { technique: T1499, tactic: impact }
+logsource: { module: web }
+detection:
+  selection:
+    event.category: web
+    http.response.status_code|gte: 500
+  condition: selection
+threshold:
+  count: 20
+  window: 2m
+  group_by: [host.name]
+suppress: 15m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-WEB-007
+title: Web error log - repeated requests for sensitive files from one client
+description: nginx/Apache error-log entries tagged sensitive-path (.env, .git, wp-config, credentials, backups) from the same client, 3+ in 5 minutes.
+severity: medium
+tags: [web, reconnaissance, team-week3]
+mitre:
+  - { technique: T1595.003, tactic: reconnaissance }
+  - { technique: T1083, tactic: discovery }
+logsource: { module: web }
+detection:
+  selection:
+    event.action: web-error
+    tags: sensitive-path
+  condition: selection
+threshold:
+  count: 3
+  window: 5m
+  group_by: [host.name, source.ip]
+suppress: 30m
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-WEB-008
+title: Web upstream / backend connection failures
+description: 5+ nginx or Apache error-log entries about refused / failed upstream connections within 2 minutes - the application backend is down.
+severity: low
+tags: [web, availability, team-week3]
+mitre:
+  - { technique: T1499, tactic: impact }
+logsource: { module: web }
+detection:
+  selection:
+    event.action: web-error
+    error.message|contains: ["connect() failed", "upstream", "attempt to connect to", "Connection refused"]
+  condition: selection
+threshold:
+  count: 5
+  window: 2m
+  group_by: [host.name]
+suppress: 30m
+playbook: playbooks/PB-002-port-scan.md

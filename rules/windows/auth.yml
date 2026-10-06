@@ -1,0 +1,130 @@
+# Windows authentication rules (Security channel)
+id: KB-WIN-001
+title: Windows brute force - many failed logons from one source
+description: >
+  10 or more failed logons (EventID 4625) from the same source IP against the same host
+  within 5 minutes. Classic password brute force / credential stuffing.
+severity: high
+tags: [windows, authentication, brute-force]
+mitre:
+  - { technique: T1110.001, tactic: credential-access }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4625"
+  filter_machine:
+    user.name|endswith: "$"
+  condition: selection and not filter_machine
+threshold:
+  count: 10
+  window: 5m
+  group_by: [host.name, source.ip]
+suppress: 10m
+playbook: playbooks/PB-001-brute-force.md
+falsepositives:
+  - Misconfigured service account after a password change (few users, many failures) - check user.name
+  - Vulnerability scanner with wrong credentials (whitelist scanner IP in a filter)
+references:
+  - https://attack.mitre.org/techniques/T1110/001/
+---
+id: KB-WIN-002
+title: Windows password spraying - one source, many user names
+description: >
+  Failed logons for 8 or more distinct user names from one source within 10 minutes.
+  Spraying tries one password against many accounts to avoid lockouts.
+severity: high
+tags: [windows, authentication, password-spraying]
+mitre:
+  - { technique: T1110.003, tactic: credential-access }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4625"
+  condition: selection
+threshold:
+  count: 8
+  window: 10m
+  group_by: [source.ip]
+  distinct: user.name
+suppress: 15m
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-WIN-003
+title: Windows account locked out
+description: An account was locked out (EventID 4740) - often the visible result of brute force or a stale credential.
+severity: medium
+tags: [windows, authentication]
+mitre:
+  - { technique: T1110, tactic: credential-access }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4740"
+  condition: selection
+group_by: [user.target.name]
+suppress: 30m
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-WIN-004
+title: Interactive / RDP logon from outside the lab networks
+description: >
+  Successful logon (4624) of type interactive, remote-interactive (RDP) or network from a source
+  IP that is not in pipeline.lab_networks. In an isolated lab nothing legitimate should come from outside.
+severity: high
+tags: [windows, authentication, lateral-movement]
+mitre:
+  - { technique: T1021.001, tactic: lateral-movement }
+  - { technique: T1078, tactic: initial-access }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4624"
+    winlog.logon.type: [remote-interactive, interactive, network, network-cleartext]
+    kharibulbul.network.zone_direction: inbound
+  filter_local:
+    source.ip: ["127.0.0.1", "::1"]
+  condition: selection and not filter_local
+group_by: [host.name, source.ip, user.name]
+suppress: 1h
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-WIN-005
+title: Logon with explicit credentials to another host (runas / pass-the-credential)
+description: EventID 4648 where a user supplied different credentials to reach a remote server; noisy in some environments, low severity for hunting.
+severity: low
+enabled: true
+tags: [windows, authentication, lateral-movement]
+mitre:
+  - { technique: T1550, tactic: lateral-movement }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: "4648"
+  filter_self:
+    destination.domain: [localhost, "-"]
+  filter_machine:
+    user.name|endswith: "$"
+  condition: selection and not filter_self and not filter_machine
+group_by: [host.name, user.name, destination.domain]
+suppress: 1h
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-WIN-006
+title: Kerberos / NTLM authentication failures burst against the domain controller
+description: 20+ Kerberos pre-auth failures (4771) or NTLM failures (4776 with error status) from one source in 5 minutes.
+severity: medium
+tags: [windows, authentication, brute-force, domain-controller]
+mitre:
+  - { technique: T1110, tactic: credential-access }
+logsource: { dataset: windows.security }
+detection:
+  selection:
+    event.code: ["4771", "4776"]
+    event.outcome: failure
+  condition: selection
+threshold:
+  count: 20
+  window: 5m
+  group_by: [host.name, source.ip]
+suppress: 15m
+playbook: playbooks/PB-001-brute-force.md

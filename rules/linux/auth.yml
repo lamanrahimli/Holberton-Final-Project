@@ -1,0 +1,97 @@
+# Linux authentication rules (sshd / PAM via auth.log, journald or syslog)
+id: KB-LNX-001
+title: SSH brute force - many failed logins from one source
+description: 8 or more sshd failures (failed password, invalid user, PAM auth failure) from one IP against one host within 5 minutes.
+severity: high
+tags: [linux, ssh, authentication, brute-force]
+mitre:
+  - { technique: T1110.001, tactic: credential-access }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: [ssh-login-failed, ssh-invalid-user, ssh-pam-auth-failure]
+  condition: selection
+threshold:
+  count: 8
+  window: 5m
+  group_by: [host.name, source.ip]
+suppress: 10m
+playbook: playbooks/PB-001-brute-force.md
+falsepositives:
+  - Ansible / monitoring with an expired key (few users, constant rate) - allow-list the source in a filter
+---
+id: KB-LNX-002
+title: SSH user enumeration - many invalid user names from one source
+description: 5+ distinct invalid user names from one IP in 10 minutes (dictionary of account names).
+severity: medium
+tags: [linux, ssh, reconnaissance, brute-force]
+mitre:
+  - { technique: T1110.003, tactic: credential-access }
+  - { technique: T1087, tactic: discovery }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: [ssh-invalid-user, ssh-login-failed]
+    tags: invalid-user
+  condition: selection
+threshold:
+  count: 5
+  window: 10m
+  group_by: [host.name, source.ip]
+  distinct: user.name
+suppress: 15m
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-LNX-003
+title: SSH login from outside the lab networks
+description: Accepted SSH login whose source IP is not in pipeline.lab_networks.
+severity: high
+tags: [linux, ssh, authentication, initial-access]
+mitre:
+  - { technique: T1078, tactic: initial-access }
+  - { technique: T1021.004, tactic: lateral-movement }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: ssh-login-success
+    kharibulbul.network.zone_direction: inbound
+  condition: selection
+group_by: [host.name, source.ip, user.name]
+suppress: 1h
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-LNX-004
+title: Direct root login over SSH
+description: Accepted SSH session for user root - should be disabled (PermitRootLogin no) in the lab baseline.
+severity: medium
+tags: [linux, ssh, authentication, hardening]
+mitre:
+  - { technique: T1078.003, tactic: privilege-escalation }
+logsource: { dataset: linux.auth }
+detection:
+  selection:
+    event.action: ssh-login-success
+    user.name: root
+  condition: selection
+group_by: [host.name, source.ip]
+suppress: 1h
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-LNX-005
+title: SSH login with password after a run of failures for the same user
+description: Password-authenticated success for a user who had 3+ failures in the previous 10 minutes on the same host (slow brute force).
+severity: high
+tags: [linux, ssh, authentication, brute-force]
+mitre:
+  - { technique: T1110.001, tactic: credential-access }
+sequence:
+  by: [host.name, user.name]
+  within: 10m
+  stages:
+    - name: failures
+      selection: { event.action: ssh-login-failed }
+      count: 3
+    - name: success
+      selection: { event.action: ssh-login-success, kharibulbul.auth.method: password }
+suppress: 30m
+playbook: playbooks/PB-001-brute-force.md

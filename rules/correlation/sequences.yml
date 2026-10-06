@@ -1,0 +1,110 @@
+# Multi-stage correlation rules (sequence engine)
+id: KB-COR-001
+title: Windows brute force followed by a successful logon from the same source
+description: >
+  5+ failed logons (4625) from one source IP and then a successful logon (4624) from the same IP
+  within 15 minutes - the attacker guessed a password. Highest-priority credential compromise signal.
+severity: critical
+tags: [windows, authentication, brute-force, correlation]
+mitre:
+  - { technique: T1110, tactic: credential-access }
+  - { technique: T1078, tactic: initial-access }
+sequence:
+  by: [source.ip]
+  within: 15m
+  stages:
+    - name: failures
+      selection: { event.code: "4625" }
+      count: 5
+    - name: success
+      selection: { event.code: "4624", winlog.logon.type: [network, remote-interactive, interactive, network-cleartext] }
+suppress: 30m
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-COR-002
+title: SSH brute force followed by an accepted login from the same source
+description: 5+ sshd failures / invalid users from one IP and then an accepted login from that IP within 15 minutes.
+severity: critical
+tags: [linux, ssh, brute-force, correlation]
+mitre:
+  - { technique: T1110, tactic: credential-access }
+  - { technique: T1078, tactic: initial-access }
+sequence:
+  by: [host.name, source.ip]
+  within: 15m
+  stages:
+    - name: failures
+      selection: { event.action: [ssh-login-failed, ssh-invalid-user, ssh-pam-auth-failure] }
+      count: 5
+    - name: success
+      selection: { event.action: ssh-login-success }
+suppress: 30m
+playbook: playbooks/PB-001-brute-force.md
+---
+id: KB-COR-003
+title: New account created and then added to a privileged group
+description: A user was created (Windows 4720 / Linux useradd) and within 30 minutes added to Administrators / Domain Admins / sudo / wheel on the same host.
+severity: critical
+tags: [iam, persistence, privilege-escalation, correlation]
+mitre:
+  - { technique: T1136, tactic: persistence }
+  - { technique: T1098, tactic: persistence }
+sequence:
+  by: [host.name]
+  within: 30m
+  stages:
+    - name: created
+      selection: { event.action: user-created }
+    - name: privileged
+      selection:
+        event.action: group-member-added
+        group.name|contains: [administrators, domain admins, enterprise admins, sudo, wheel, root, docker]
+suppress: 1h
+playbook: playbooks/PB-004-new-account.md
+---
+id: KB-COR-004
+title: Port scan followed by a successful logon from the scanning source
+description: A scan alert pattern (20+ ports from one IP) followed by a successful Windows or SSH logon from the same IP within 30 minutes.
+severity: critical
+tags: [network, authentication, correlation, lateral-movement]
+mitre:
+  - { technique: T1046, tactic: discovery }
+  - { technique: T1078, tactic: initial-access }
+sequence:
+  by: [source.ip]
+  within: 30m
+  stages:
+    - name: scan
+      selection:
+        event.category: network
+        event.action: [firewall-block, network-connection]
+      count: 20
+    - name: logon
+      selection: { event.action: [logon-success, ssh-login-success] }
+suppress: 1h
+playbook: playbooks/PB-002-port-scan.md
+---
+id: KB-COR-005
+title: Download utility execution followed by outbound connection from a user-writable binary
+description: A LOLBin download (certutil/bitsadmin/powershell cradle) on a host, then within 10 minutes an outbound connection by a binary in Users/Temp/AppData - dropper executed.
+severity: critical
+tags: [windows, sysmon, command-and-control, correlation]
+mitre:
+  - { technique: T1105, tactic: command-and-control }
+  - { technique: T1071, tactic: command-and-control }
+sequence:
+  by: [host.name]
+  within: 10m
+  stages:
+    - name: download
+      selection:
+        event.action: process-created
+        process.name: [certutil.exe, bitsadmin.exe, powershell.exe, pwsh.exe, curl.exe, wget.exe]
+        process.command_line|contains: [http, urlcache, /transfer, downloadstring, downloadfile, invoke-webrequest]
+    - name: beacon
+      selection:
+        event.code: "3"
+        network.direction: outbound
+        process.executable|contains: ["\\users\\", "\\temp\\", "\\appdata\\", "\\programdata\\", "\\public\\"]
+suppress: 30m
+playbook: playbooks/PB-009-c2-beacon.md

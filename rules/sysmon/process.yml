@@ -1,0 +1,125 @@
+# Process-behaviour rules (Sysmon 1 / 8 / 10 / 25)
+id: KB-SYS-030
+title: Office application spawning a shell or script host
+description: Word/Excel/PowerPoint/Outlook starting cmd, PowerShell, wscript, mshta, rundll32... - macro or exploit document execution.
+severity: critical
+tags: [windows, sysmon, initial-access, execution, phishing]
+mitre:
+  - { technique: T1566.001, tactic: initial-access }
+  - { technique: T1204.002, tactic: execution }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.parent.name: [winword.exe, excel.exe, powerpnt.exe, outlook.exe, msaccess.exe, onenote.exe, mspub.exe, visio.exe]
+    process.name: [cmd.exe, powershell.exe, pwsh.exe, wscript.exe, cscript.exe, mshta.exe, rundll32.exe, regsvr32.exe, certutil.exe, bitsadmin.exe, msiexec.exe, schtasks.exe, wmic.exe, curl.exe]
+  condition: selection
+group_by: [host.name, user.name]
+suppress: 30m
+playbook: playbooks/PB-007-malware.md
+---
+id: KB-SYS-040
+title: LSASS memory access from an unusual process (credential dumping)
+description: >
+  Sysmon 10 - a process not on the allow-list opened lsass.exe with access rights used by credential
+  dumpers (0x1010, 0x1410, 0x1438, 0x1fffff...). Mimikatz / procdump style.
+severity: critical
+tags: [windows, sysmon, credential-access]
+mitre:
+  - { technique: T1003.001, tactic: credential-access }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "10"
+    process.target.name: lsass.exe
+    sysmon.granted_access: ["0x1010", "0x1410", "0x1438", "0x143a", "0x1fffff", "0x1f0fff", "0x1f1fff", "0x1f3fff", "0x40", "0x1000", "0x1001", "0xfffff"]
+  filter_known:
+    process.name: [msmpeng.exe, csrss.exe, wininit.exe, services.exe, lsass.exe, svchost.exe, taskmgr.exe, procexp64.exe, procexp.exe, wmiprvse.exe, msedge.exe, chrome.exe, firefox.exe, sysmon.exe, sysmon64.exe, vmtoolsd.exe, mssense.exe]
+    process.executable|startswith: ["c:\\windows\\system32\\", "c:\\program files\\", "c:\\program files (x86)\\", "c:\\windows\\sysmon"]
+  condition: selection and not filter_known
+group_by: [host.name, process.name]
+suppress: 30m
+playbook: playbooks/PB-007-malware.md
+---
+id: KB-SYS-041
+title: Remote thread created in another process (injection)
+description: Sysmon 8 CreateRemoteThread from a process outside the usual system set - process injection.
+severity: high
+tags: [windows, sysmon, defense-evasion, privilege-escalation]
+mitre:
+  - { technique: T1055, tactic: defense-evasion }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "8"
+  filter_known:
+    process.name: [csrss.exe, wininit.exe, services.exe, svchost.exe, msmpeng.exe, lsass.exe, winlogon.exe, explorer.exe, vmtoolsd.exe, sysmon.exe, sysmon64.exe]
+  condition: selection and not filter_known
+group_by: [host.name, process.name, process.target.name]
+suppress: 30m
+playbook: playbooks/PB-007-malware.md
+---
+id: KB-SYS-050
+title: Executable started from a user-writable / temporary directory
+description: Process created from Users\Public, Temp, AppData\Local\Temp, ProgramData, Downloads or the Recycle Bin - first stage of most malware.
+severity: medium
+tags: [windows, sysmon, execution]
+mitre:
+  - { technique: T1204.002, tactic: execution }
+logsource: { module: windows }
+detection:
+  selection:
+    event.action: process-created
+    process.executable|contains: ["\\users\\public\\", "\\windows\\temp\\", "\\appdata\\local\\temp\\", "\\downloads\\", "$recycle.bin", "\\programdata\\"]
+    process.executable|endswith: [".exe", ".scr", ".com", ".pif", ".cpl"]
+  filter_updaters:
+    process.executable|contains: ["\\microsoft\\edgeupdate\\", "\\google\\update\\", "\\programdata\\microsoft\\windows defender\\", "\\teams\\", "\\onedrive\\", "\\discord\\", "\\zoom\\", "\\vscode\\"]
+  condition: selection and not filter_updaters
+group_by: [host.name, process.name]
+suppress: 1h
+playbook: playbooks/PB-007-malware.md
+---
+id: KB-SYS-060
+title: Process tampering detected by Sysmon (hollowing / herpaderping)
+description: Sysmon 25 ProcessTampering - image was replaced or the executable changed after mapping.
+severity: critical
+tags: [windows, sysmon, defense-evasion]
+mitre:
+  - { technique: T1055.012, tactic: defense-evasion }
+logsource: { dataset: windows.sysmon }
+detection:
+  selection:
+    event.code: "25"
+  condition: selection
+group_by: [host.name, process.name]
+suppress: 30m
+playbook: playbooks/PB-007-malware.md
+---
+id: KB-SYS-061
+title: Shadow copy deletion / backup tampering (ransomware precursor)
+description: vssadmin delete shadows, wmic shadowcopy delete, wbadmin delete catalog, bcdedit recoveryenabled no.
+severity: critical
+tags: [windows, sysmon, impact, ransomware]
+mitre:
+  - { technique: T1490, tactic: impact }
+logsource: { module: windows }
+detection:
+  selection_vss:
+    event.action: process-created
+    process.name: vssadmin.exe
+    process.command_line|contains|all: [delete, shadows]
+  selection_wmic:
+    event.action: process-created
+    process.command_line|contains|all: [shadowcopy, delete]
+  selection_wbadmin:
+    event.action: process-created
+    process.name: wbadmin.exe
+    process.command_line|contains: [delete, "disable backup"]
+  selection_bcdedit:
+    event.action: process-created
+    process.name: bcdedit.exe
+    process.command_line|contains: [recoveryenabled, bootstatuspolicy]
+  condition: 1 of selection_*
+group_by: [host.name]
+suppress: 10m
+playbook: playbooks/PB-007-malware.md

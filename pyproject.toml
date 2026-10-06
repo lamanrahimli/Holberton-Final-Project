@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kharibulbul"
+version = "1.0.0"
+description = "Kharibulbul (Xarıbülbül) - a from-scratch, open-source national mini-SIEM: agent, ingest pipeline, ECS normalisation, GeoIP enrichment, detection engine, alerting and dashboards."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Kharibulbul SIEM Team" }]
+keywords = ["siem", "security", "detection", "blue-team", "logging", "ecs"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Security",
+  "Topic :: System :: Logging",
+  "Topic :: System :: Monitoring",
+]
+dependencies = [
+  "pyyaml>=6.0",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+]
+
+[project.optional-dependencies]
+geoip = ["maxminddb>=2.5"]
+dev = ["pytest>=8.0", "httpx>=0.27"]
+
+[project.scripts]
+kharibulbul = "kharibulbul.cli:main"
+kb = "kharibulbul.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["kharibulbul*"]
+
+[tool.setuptools.package-data]
+"kharibulbul.web" = ["static/*", "static/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

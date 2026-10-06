@@ -1,0 +1,9 @@
+2026/09/27 10:16:00 [error] 1201#1201: *17 open() "/var/www/html/.env" failed (2: No such file or directory), client: 10.10.99.10, server: srv-web01, request: "GET /.env HTTP/1.1", host: "srv-web01"
+2026/09/27 10:16:01 [error] 1201#1201: *18 open() "/var/www/html/.git/config" failed (2: No such file or directory), client: 10.10.99.10, server: srv-web01, request: "GET /.git/config HTTP/1.1", host: "srv-web01"
+2026/09/27 10:16:02 [error] 1201#1201: *19 open() "/var/www/html/wp-config.php.bak" failed (2: No such file or directory), client: 10.10.99.10, server: srv-web01, request: "GET /wp-config.php.bak HTTP/1.1", host: "srv-web01"
+2026/09/27 10:16:03 [error] 1201#1201: *20 access forbidden by rule, client: 10.10.99.10, server: srv-web01, request: "GET /.aws/credentials HTTP/1.1", host: "srv-web01"
+2026/09/27 10:17:30 [error] 1201#1201: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 10.10.20.33, server: srv-web01, request: "GET /api/orders HTTP/1.1", upstream: "http://127.0.0.1:9000/api/orders", host: "srv-web01"
+2026/09/27 10:17:31 [error] 1201#1201: *26 connect() failed (111: Connection refused) while connecting to upstream, client: 10.10.20.41, server: srv-web01, request: "GET /api/orders HTTP/1.1", upstream: "http://127.0.0.1:9000/api/orders", host: "srv-web01"
+2026/09/27 10:17:32 [crit] 1201#1201: *27 SSL_do_handshake() failed (SSL: error:0A00006C:SSL routines::bad key share) while SSL handshaking, client: 10.10.99.10, server: 0.0.0.0:443
+2026/09/27 10:20:00 [notice] 1200#1200: signal process started
+2026/09/27 10:20:00 [warn] 1200#1200: conflicting server name "srv-web01" on 0.0.0.0:80, ignored
