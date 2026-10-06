@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kharibulbul SIEM</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <nav class="side">
+    <div class="brand">
+      <img src="logo.png" alt="Kharibulbul">
+      <div>
+        <div class="name">Kharibulbul</div>
+        <div class="sub">Xarıbülbül SIEM · SOC</div>
+      </div>
+    </div>
+    <a class="item" href="#/overview" data-route="overview">📊 <span>Overview</span></a>
+    <a class="item" href="#/events" data-route="events">🔎 <span>Events</span></a>
+    <a class="item" href="#/alerts" data-route="alerts">🚨 <span>Alerts</span></a>
+    <a class="item" href="#/agents" data-route="agents">🖥️ <span>Agents</span></a>
+    <a class="item" href="#/rules" data-route="rules">🧩 <span>Rules</span></a>
+    <a class="item" href="#/playbooks" data-route="playbooks">📘 <span>Playbooks</span></a>
+    <div class="spacer"></div>
+    <div class="foot">
+      <div id="footer-status">connecting…</div>
+      <div><a href="#" id="set-token">API token</a></div>
+      <span class="tri"></span>
+    </div>
+  </nav>
+  <main id="main"><div class="empty">Loading…</div></main>
+</div>
+<div id="drawer-root"></div>
+<script src="app.js"></script>
+</body>
+</html>
